@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="U-Borrow-It.Core/U-Borrow-It.Core.csproj" />
+  <Project Path="U-Borrow-It.Infrastructure.Tests/U-Borrow-It.Infrastructure.Tests.csproj" />
+  <Project Path="U-Borrow-It.Infrastructure/U-Borrow-It.Infrastructure.csproj" />
+  <Project Path="U-Borrow-It.Repository/U-Borrow-It.Repository.csproj" />
+  <Project Path="U-Borrow-It.Tests/U-Borrow-It.Tests.csproj" />
+  <Project Path="U-Borrow-It/U-Borrow-It.csproj" />
+</Solution>
