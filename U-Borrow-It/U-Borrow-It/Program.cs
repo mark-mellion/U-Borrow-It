@@ -1,10 +1,31 @@
 using U_Borrow_It.Components;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using UBorrowIt.Data;
+using U_Borrow_It.Areas.Identity.Data;
+using Microsoft.AspNetCore.Identity.UI.Services;
+using Radzen;
+
 
 var builder = WebApplication.CreateBuilder(args);
+var connectionString = builder.Configuration.GetConnectionString("ApplicationContextConnection")
+    ?? throw new InvalidOperationException("Connection string 'ApplicationContextConnection' not found.");
+
+builder.Services.AddDbContext<ApplicationContext>(
+    options => options.UseSqlServer(connectionString)
+    );
+
+builder.Services.AddDefaultIdentity<ApplicationUser>(
+    options => options.SignIn.RequireConfirmedAccount = true
+    ).AddEntityFrameworkStores<ApplicationContext>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+builder.Services.AddRazorPages();
+
+builder.Services.AddRadzenComponents();
+builder.Services.AddCascadingAuthenticationState();
 
 var app = builder.Build();
 
@@ -17,10 +38,13 @@ if (!app.Environment.IsDevelopment())
 }
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseAntiforgery();
 
-app.MapStaticAssets();
+app.MapRazorPages();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
