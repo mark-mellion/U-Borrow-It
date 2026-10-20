@@ -1,4 +1,6 @@
-﻿<!DOCTYPE html>
+﻿@using Radzen.Blazor
+
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -11,13 +13,15 @@
     <link rel="stylesheet" href="@Assets["U-Borrow-It.styles.css"]" />
     <ImportMap />
     <link rel="icon" type="image/png" href="favicon.png" />
-    <HeadOutlet />
+    <RadzenTheme Theme="material" @rendermode="InteractiveServer" />
+    <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 
 <body>
-    <Routes />
+    <Routes @rendermode="InteractiveServer" />
     <ReconnectModal />
-    <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script src="_framework/blazor.web.js"></script>
+    <script src="_content/Radzen.Blazor/Radzen.Blazor.js"></script>
 </body>
 
 </html>
