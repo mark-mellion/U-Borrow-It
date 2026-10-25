@@ -1,0 +1,22 @@
+@inject DialogService DialogService
+
+<RadzenStack Gap="1.5rem">
+    <RadzenText>
+        Are you sure you want to delete <strong>@ItemTitle</strong>? This can't be undone.
+    </RadzenText>
+
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+        <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="Cancel" />
+        <RadzenButton Text="Delete" ButtonStyle="ButtonStyle.Danger"
+                      Style="border-radius: 999px;" Click="ConfirmDelete" />
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    [Parameter]
+    public string ItemTitle { get; set; } = "";
+
+    private void Cancel() => DialogService.Close(false);
+
+    private void ConfirmDelete() => DialogService.Close(true);
+}

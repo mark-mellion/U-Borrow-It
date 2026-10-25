@@ -87,16 +87,42 @@ else
         }
     }
 
-        private async Task OpenDetails(LentItem item)
+    private async Task OpenDetails(LentItem item)
     {
-        await DialogService.OpenAsync<ItemDetailsDialog>(
+        var result = await DialogService.OpenAsync<ItemDetailsDialog>(
             item.Title,
             new Dictionary<string, object> { { "Item", item } },
             new DialogOptions
             {
                 ShowClose = true,
                 CloseDialogOnOverlayClick = true,
-                Width = "min(700px, calc(100vw - 4rem))"
+                Width = "Min(700px, calc(100vw - 4rem))"
             });
+
+        if (result is true)
+        {
+            await DeleteItem(item);
+        }
+    }
+
+        private async Task DeleteItem(LentItem item)
+    {
+        errorMessage = "";
+
+        try
+        {
+            bool deleted = await Repo.DeleteAsync(item.LentItemID, testAccountId);
+
+            if (!deleted)
+            {
+                errorMessage = "That item couldn't be found. It may have already been deleted.";
+            }
+
+            await LoadItems();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Could not delete item: " + ex.Message;
+        }
     }
 }

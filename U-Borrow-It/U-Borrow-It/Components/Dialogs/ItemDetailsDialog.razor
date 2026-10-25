@@ -1,4 +1,5 @@
 @using U_Borrow_It.Core.DTOs
+@inject DialogService DialogService
 
 <RadzenStack Gap="1rem">
     <div>
@@ -12,9 +13,31 @@
         <RadzenText TextStyle="TextStyle.Subtitle2">Date added</RadzenText>
         <RadzenText>@Item.DateAdded.ToLongDateString()</RadzenText>
     </div>
+
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
+        <RadzenButton Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Danger"
+                      Variant="Variant.Outlined" Click="RequestDelete" />
+    </RadzenStack>
 </RadzenStack>
 
 @code {
     [Parameter]
     public LentItem Item { get; set; } = default!;
+
+    private async Task RequestDelete()
+    {
+        var confirmed = await DialogService.OpenAsync<ConfirmDeleteDialog>(
+            "Delete item?",
+            new Dictionary<string, object> { { "ItemTitle", Item.Title } },
+            new DialogOptions
+            {
+                ShowClose = false,
+                Width = "min(400px, calc(100vw - 4rem))"
+            });
+
+        if (confirmed is true)
+        {
+            DialogService.Close(true);
+        }
+    }
 }
