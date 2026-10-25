@@ -1,0 +1,90 @@
+@page "/my-items"
+@using U_Borrow_It.Core.DTOs
+@using U_Borrow_It.Core.Interfaces
+@inject ILentItemRepository Repo
+
+<PageTitle>My Items</PageTitle>
+
+<h3>My Items</h3>
+
+<div>
+    <input @bind="newTitle" placeholder="Title" maxlength="100" />
+    <input @bind="newDescription" placeholder="Description (optional)" />
+    <button @onclick="SaveItem">Save</button>
+</div>
+
+@if (errorMessage != "")
+{
+    <p style="color: red;">@errorMessage</p>
+}
+
+@if (items.Count == 0)
+{
+    <p>You haven't added any items yet.</p>
+}
+else
+{
+    <ul>
+        @foreach (var item in items)
+        {
+            <li>
+                <strong>@item.Title</strong>
+                @if (item.Description != "")
+                {
+                    <span> - @item.Description</span>
+                }
+                <small> (added @item.DateAdded.ToShortDateString())</small>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    // Temporary: replace with the logged-in user's account once login is linked to Account
+    private Guid testAccountId = Guid.Parse("26B813A7-C0CF-F111-BF5B-7CED8DA5F6D4");
+
+    private string newTitle = "";
+    private string newDescription = "";
+    private string errorMessage = "";
+    private List<LentItem> items = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadItems();
+    }
+
+    private async Task SaveItem()
+    {
+        errorMessage = "";
+
+        if (string.IsNullOrWhiteSpace(newTitle))
+        {
+            errorMessage = "Please enter a title.";
+            return;
+        }
+
+        try
+        {
+            await Repo.AddAsync(testAccountId, newTitle.Trim(), newDescription.Trim());
+            newTitle = "";
+            newDescription = "";
+            await LoadItems();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Could not save item: " + ex.Message;
+        }
+    }
+
+    private async Task LoadItems()
+    {
+        try
+        {
+            items = await Repo.GetForAccountAsync(testAccountId);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Could not load items: " + ex.Message;
+        }
+    }
+}
