@@ -7,6 +7,7 @@
     <RootNamespace>U_Borrow_It</RootNamespace>
     <AssemblyName>$(AssemblyName.Replace(' ', '_'))</AssemblyName>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+    <UserSecretsId>d619baf8-9557-4753-b3a1-55e723ce8d07</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
