@@ -99,7 +99,7 @@ else
                 Width = "Min(700px, calc(100vw - 4rem))"
             });
 
-        if (result is true)
+        if (result is ItemDetailsResult.Delete)
         {
             await DeleteItem(item);
         }
