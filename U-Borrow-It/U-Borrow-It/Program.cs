@@ -5,6 +5,8 @@ using UBorrowIt.Data;
 using U_Borrow_It.Areas.Identity.Data;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Radzen;
+using U_Borrow_It.Core.Interfaces;
+using U_Borrow_It.Repository;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,6 +27,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddRazorPages();
 
 builder.Services.AddRadzenComponents();
+builder.Services.AddScoped<ILentItemRepository>(_ => new LentItemRepository(connectionString));
 builder.Services.AddCascadingAuthenticationState();
 
 var app = builder.Build();

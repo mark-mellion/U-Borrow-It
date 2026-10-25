@@ -21,4 +21,9 @@
     <PackageReference Include="Radzen.Blazor" Version="12.1.4" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\U-Borrow-It.Core\U-Borrow-It.Core.csproj" />
+    <ProjectReference Include="..\U-Borrow-It.Repository\U-Borrow-It.Repository.csproj" />
+  </ItemGroup>
+
 </Project>
