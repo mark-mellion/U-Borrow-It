@@ -2,6 +2,8 @@
 @using U_Borrow_It.Core.DTOs
 @using U_Borrow_It.Core.Interfaces
 @inject ILentItemRepository Repo
+@using U_Borrow_It.Components.Dialogs
+@inject DialogService DialogService
 
 <PageTitle>My Items</PageTitle>
 
@@ -28,12 +30,9 @@ else
         @foreach (var item in items)
         {
             <li>
-                <strong>@item.Title</strong>
-                @if (item.Description != "")
-                {
-                    <span> - @item.Description</span>
-                }
-                <small> (added @item.DateAdded.ToShortDateString())</small>
+                <button class="btn btn-link p-0" @onclick="() => OpenDetails(item)">
+                    @item.Title
+                </button>
             </li>
         }
     </ul>
@@ -86,5 +85,18 @@ else
         {
             errorMessage = "Could not load items: " + ex.Message;
         }
+    }
+
+        private async Task OpenDetails(LentItem item)
+    {
+        await DialogService.OpenAsync<ItemDetailsDialog>(
+            item.Title,
+            new Dictionary<string, object> { { "Item", item } },
+            new DialogOptions
+            {
+                ShowClose = true,
+                CloseDialogOnOverlayClick = true,
+                Width = "min(700px, calc(100vw - 4rem))"
+            });
     }
 }

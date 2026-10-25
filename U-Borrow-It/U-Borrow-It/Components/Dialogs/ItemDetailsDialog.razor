@@ -1,0 +1,20 @@
+@using U_Borrow_It.Core.DTOs
+
+<RadzenStack Gap="1rem">
+    <div>
+        <RadzenText TextStyle="TextStyle.Subtitle2">Description</RadzenText>
+        <RadzenText>
+            @(string.IsNullOrWhiteSpace(Item.Description) ? "No description" : Item.Description)
+        </RadzenText>
+    </div>
+
+    <div>
+        <RadzenText TextStyle="TextStyle.Subtitle2">Date added</RadzenText>
+        <RadzenText>@Item.DateAdded.ToLongDateString()</RadzenText>
+    </div>
+</RadzenStack>
+
+@code {
+    [Parameter]
+    public LentItem Item { get; set; } = default!;
+}

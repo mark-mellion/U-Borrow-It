@@ -6,4 +6,5 @@ public interface ILentItemRepository
 {
     Task AddAsync(Guid accountId, string title, string description);
     Task<List<LentItem>> GetForAccountAsync(Guid accountId);
+    Task<bool> DeleteAsync(Guid lentItemId, Guid accountId);
 }
