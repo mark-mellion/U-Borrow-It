@@ -11,7 +11,7 @@
 
 <div>
     <input @bind="newTitle" placeholder="Title" maxlength="100" />
-    <input @bind="newDescription" placeholder="Description (optional)" />
+    <input @bind="newDescription" placeholder="Description (optional)" maxlength="2000" />
     <button @onclick="SaveItem">Save</button>
 </div>
 
@@ -103,9 +103,13 @@ else
         {
             await DeleteItem(item);
         }
+        else if (result is ItemDetailsResult.Edit)
+        {
+            await EditItem(item);
+        }
     }
 
-        private async Task DeleteItem(LentItem item)
+    private async Task DeleteItem(LentItem item)
     {
         errorMessage = "";
 
@@ -123,6 +127,50 @@ else
         catch (Exception ex)
         {
             errorMessage = "Could not delete item: " + ex.Message;
+        }
+    }
+
+        private async Task EditItem(LentItem item)
+    {
+        var edited = await DialogService.OpenAsync<EditItemDialog>(
+            "Edit item",
+            new Dictionary<string, object> { { "Item", item } },
+            new DialogOptions
+            {
+                ShowClose = false,
+                CloseDialogOnOverlayClick = false,
+                CloseDialogOnEsc = true,
+                Width = "min(600px, calc(100vw - 4rem))"
+            });
+
+        if (edited is LentItem changes)
+        {
+            errorMessage = "";
+
+            try
+            {
+                bool updated = await Repo.UpdateAsync(
+                    item.LentItemID, testAccountId, changes.Title, changes.Description);
+
+                if (!updated)
+                {
+                    errorMessage = "That item couldn't be found. It may have been deleted.";
+                }
+
+                await LoadItems();
+            }
+            catch (Exception ex)
+            {
+                errorMessage = "Could not update item: " + ex.Message;
+                return;
+            }
+        }
+
+        // Reopen the details popup, showing the latest version of the item
+        var current = items.FirstOrDefault(i => i.LentItemID == item.LentItemID);
+        if (current != null)
+        {
+            await OpenDetails(current);
         }
     }
 }
