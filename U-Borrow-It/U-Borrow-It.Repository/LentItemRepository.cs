@@ -56,4 +56,22 @@ public class LentItemRepository : ILentItemRepository
         }
         return items;
     }
+
+        public async Task<bool> DeleteAsync(Guid lentItemId, Guid accountId)
+    {
+        const string sql = @"
+            UPDATE dbo.LentItem
+            SET Active = 0
+            WHERE LentItemID = @LentItemID
+              AND AccountID = @AccountID
+              AND Active = 1;";
+
+        await using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync();
+        await using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@LentItemID", lentItemId);
+        cmd.Parameters.AddWithValue("@AccountID", accountId);
+        int rowsAffected = await cmd.ExecuteNonQueryAsync();
+        return rowsAffected > 0;
+    }
 }
