@@ -14,7 +14,9 @@
         <RadzenText>@Item.DateAdded.ToLongDateString()</RadzenText>
     </div>
 
-    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
+        <RadzenButton Text="Edit" Icon="edit" ButtonStyle="ButtonStyle.Primary"
+                      Variant="Variant.Outlined" Click="RequestEdit" />
         <RadzenButton Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Danger"
                       Variant="Variant.Outlined" Click="RequestDelete" />
     </RadzenStack>
@@ -38,7 +40,9 @@
 
         if (confirmed is true)
         {
-            DialogService.Close(true);
+            DialogService.Close(ItemDetailsResult.Delete);
         }
     }
+
+        private void RequestEdit() => DialogService.Close(ItemDetailsResult.Edit);
 }

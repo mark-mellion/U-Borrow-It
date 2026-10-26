@@ -1,0 +1,56 @@
+@using U_Borrow_It.Core.DTOs
+@inject DialogService DialogService
+
+<RadzenStack Gap="1rem">
+    <RadzenFormField Text="Title" Style="width: 100%;">
+        <RadzenTextBox @bind-Value="title" MaxLength="100" />
+    </RadzenFormField>
+
+    <RadzenFormField Text="Description" Style="width: 100%;">
+        <RadzenTextArea @bind-Value="description" MaxLength="2000" Rows="8"
+                        Style="width: 100%; resize: none;" />
+    </RadzenFormField>
+
+    @if (errorMessage != "")
+    {
+        <RadzenText Style="color: var(--rz-danger);">@errorMessage</RadzenText>
+    }
+
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
+        <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="Cancel" />
+        <RadzenButton Text="Confirm" ButtonStyle="ButtonStyle.Primary" Click="Confirm" />
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    [Parameter]
+    public LentItem Item { get; set; } = default!;
+
+    private string title = "";
+    private string description = "";
+    private string errorMessage = "";
+
+    protected override void OnInitialized()
+    {
+        title = Item.Title;
+        description = Item.Description;
+    }
+
+    private void Cancel() => DialogService.Close();
+
+    private void Confirm()
+    {
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            errorMessage = "Please enter a title.";
+            return;
+        }
+
+        DialogService.Close(new LentItem
+        {
+            LentItemID = Item.LentItemID,
+            Title = title.Trim(),
+            Description = description.Trim()
+        });
+    }
+}
