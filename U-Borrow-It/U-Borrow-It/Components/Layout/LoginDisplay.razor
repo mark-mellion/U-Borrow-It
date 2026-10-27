@@ -1,0 +1,14 @@
+<AuthorizeView>
+    <Authorized>
+        <a href="Identity/Account/Manage" target="_top">Hello, @context.User.Identity?.Name</a>
+        <form method="post" action="Identity/Account/Logout" class="d-inline">
+            <AntiforgeryToken />
+            <input type="hidden" name="returnUrl" value="/" />
+            <button type="submit" class="btn btn-link p-0">Log out</button>
+        </form>
+    </Authorized>
+    <NotAuthorized>
+        <a href="Identity/Account/Register" target="_top">Register</a>
+        <a href="Identity/Account/Login" target="_top">Log in</a>
+    </NotAuthorized>
+</AuthorizeView>
