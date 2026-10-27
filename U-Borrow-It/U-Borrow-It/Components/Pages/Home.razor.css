@@ -1,0 +1,66 @@
+
+.ub-home {
+    max-width: 1100px;
+    margin: 2rem auto;
+}
+
+.ub-hero {
+    background: linear-gradient(135deg, #102a43, #24617a);
+    color: white;
+    border-radius: 18px;
+    padding: 4rem 3rem;
+}
+
+.ub-brand {
+    font-weight: 700;
+    margin-bottom: 2rem;
+    letter-spacing: 1px;
+}
+
+.ub-hero h1 {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 700;
+    max-width: 650px;
+    margin-bottom: 1.5rem;
+}
+
+.ub-hero p {
+    color: #d3e3ec;
+    font-size: 1.1rem;
+    max-width: 550px;
+    margin-bottom: 2rem;
+}
+
+.ub-features {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.ub-feature {
+    background: white;
+    border: 1px solid #e0e6ed;
+    border-radius: 12px;
+    padding: 1.75rem;
+}
+
+.ub-feature h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.ub-feature p {
+    color: #607080;
+    margin-bottom: 0;
+}
+
+@media (max-width: 700px) {
+    .ub-hero {
+        padding: 2.5rem 1.5rem;
+    }
+
+    .ub-features {
+        grid-template-columns: 1fr;
+    }
+}

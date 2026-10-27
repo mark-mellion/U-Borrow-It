@@ -9,6 +9,20 @@
 
 <h3>My Items</h3>
 
+<div class="mb-3 d-flex gap-2">
+    <input class="form-control"
+           placeholder="Search items by name..."
+           @bind="searchText" />
+
+    <button class="btn btn-primary" @onclick="SearchItems">
+        Search
+    </button>
+
+    <button class="btn btn-secondary" @onclick="ClearSearch">
+        Clear
+    </button>
+</div>
+
 <div>
     <input @bind="newTitle" placeholder="Title" maxlength="100" />
     <input @bind="newDescription" placeholder="Description (optional)" maxlength="2000" />
@@ -85,6 +99,34 @@ else
         {
             errorMessage = "Could not load items: " + ex.Message;
         }
+    }
+
+    private string searchText = "";
+
+    private async Task SearchItems()
+    {
+        errorMessage = "";
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            await LoadItems();
+            return;
+        }
+        try
+        {
+            items = await Repo.SearchForAccountAsync(
+                testAccountId, searchText.Trim());
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Could not search items: " + ex.Message;
+        }
+    }
+
+    private async Task ClearSearch()
+    {
+        searchText = "";
+        errorMessage = "";
+        await LoadItems();
     }
 
     private async Task OpenDetails(LentItem item)
