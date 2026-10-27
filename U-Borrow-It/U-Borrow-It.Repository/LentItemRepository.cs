@@ -95,4 +95,43 @@ public class LentItemRepository : ILentItemRepository
         int rowsAffected = await cmd.ExecuteNonQueryAsync();
         return rowsAffected > 0;
     }
-}
+        
+public async Task<List<LentItem>> SearchForAccountAsync(
+    Guid accountId, string searchText)
+{
+    const string sql = @"
+        SELECT LentItemID, Title, [Description], AccountID, DateAdded, Active
+        FROM dbo.LentItem
+        WHERE AccountID = @AccountID
+          AND Active = 1
+          AND CHARINDEX(@SearchText, Title) > 0
+        ORDER BY DateAdded DESC;";
+
+            var items = new List<LentItem>();
+
+            await using var conn = new SqlConnection(_connectionString);
+            await conn.OpenAsync();
+
+            await using var cmd = new SqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@AccountID", accountId);
+            cmd.Parameters.AddWithValue("@SearchText", searchText);
+
+            await using var reader = await cmd.ExecuteReaderAsync();
+
+            while (await reader.ReadAsync())
+            {
+                items.Add(new LentItem
+                {
+                    LentItemID = reader.GetGuid(0),
+                    Title = reader.GetString(1),
+                    Description = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                    AccountID = reader.GetGuid(3),
+                    DateAdded = reader.GetDateTime(4),
+                    Active = reader.GetBoolean(5)
+                });
+            }
+
+            return items;
+        }
+
+    }
