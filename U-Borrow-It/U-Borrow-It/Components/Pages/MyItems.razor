@@ -48,7 +48,14 @@ else
 
     @if (items.Count == 0)
     {
-        <p>You haven't added any items yet.</p>
+        @if (activeSearch != "")
+        {
+            <p>No items matching your search.</p>
+        }
+        else
+        {
+            <p>You haven't added any items yet.</p>
+        }
     }
     else
     {
@@ -77,6 +84,8 @@ else
     private string newDescription = "";
     private string errorMessage = "";
     private List<LentItem> items = new();
+    private string activeSearch = "";
+    private string searchText = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -125,14 +134,13 @@ else
         try
         {
             items = await Repo.GetForAccountAsync(accountId);
+            activeSearch = "";
         }
         catch (Exception ex)
         {
             errorMessage = "Could not load items: " + ex.Message;
         }
     }
-
-    private string searchText = "";
 
     private async Task SearchItems()
     {
@@ -146,6 +154,7 @@ else
         {
             items = await Repo.SearchForAccountAsync(
                 accountId, searchText.Trim());
+            activeSearch = searchText.Trim();
         }
         catch (Exception ex)
         {
