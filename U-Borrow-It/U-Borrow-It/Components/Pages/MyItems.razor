@@ -4,57 +4,74 @@
 @inject ILentItemRepository Repo
 @using U_Borrow_It.Components.Dialogs
 @inject DialogService DialogService
+@using System.Security.Claims
+@inject IAccountRepository AccountRepo
 
 <PageTitle>My Items</PageTitle>
 
 <h3>My Items</h3>
 
-<div class="mb-3 d-flex gap-2">
-    <input class="form-control"
-           placeholder="Search items by name..."
-           @bind="searchText" />
-
-    <button class="btn btn-primary" @onclick="SearchItems">
-        Search
-    </button>
-
-    <button class="btn btn-secondary" @onclick="ClearSearch">
-        Clear
-    </button>
-</div>
-
-<div>
-    <input @bind="newTitle" placeholder="Title" maxlength="100" />
-    <input @bind="newDescription" placeholder="Description (optional)" maxlength="2000" />
-    <button @onclick="SaveItem">Save</button>
-</div>
-
-@if (errorMessage != "")
+@if (loading)
 {
-    <p style="color: red;">@errorMessage</p>
+    <p>Loading…</p>
 }
-
-@if (items.Count == 0)
+else if (!accountLinked)
 {
-    <p>You haven't added any items yet.</p>
+    <p>Your login isn't linked to an account yet, so there are no items to show. Please contact an administrator.</p>
 }
 else
 {
-    <ul>
-        @foreach (var item in items)
-        {
-            <li>
-                <button class="btn btn-link p-0" @onclick="() => OpenDetails(item)">
-                    @item.Title
-                </button>
-            </li>
-        }
-    </ul>
+    <div class="mb-3 d-flex gap-2">
+        <input class="form-control"
+            placeholder="Search items by name..."
+            @bind="searchText" />
+
+        <button class="btn btn-primary" @onclick="SearchItems">
+            Search
+        </button>
+
+        <button class="btn btn-secondary" @onclick="ClearSearch">
+            Clear
+        </button>
+    </div>
+
+    <div>
+        <input @bind="newTitle" placeholder="Title" maxlength="100" />
+        <input @bind="newDescription" placeholder="Description (optional)" maxlength="2000" />
+        <button @onclick="SaveItem">Save</button>
+    </div>
+
+    @if (errorMessage != "")
+    {
+        <p style="color: red;">@errorMessage</p>
+    }
+
+    @if (items.Count == 0)
+    {
+        <p>You haven't added any items yet.</p>
+    }
+    else
+    {
+        <ul>
+            @foreach (var item in items)
+            {
+                <li>
+                    <button class="btn btn-link p-0" @onclick="() => OpenDetails(item)">
+                        @item.Title
+                    </button>
+                </li>
+            }
+        </ul>
+    }
 }
 
 @code {
-    // Temporary: replace with the logged-in user's account once login is linked to Account
-    private Guid testAccountId = Guid.Parse("26B813A7-C0CF-F111-BF5B-7CED8DA5F6D4");
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+
+    private Guid accountId;
+    private bool accountLinked = false;
+    private bool loading = true;
 
     private string newTitle = "";
     private string newDescription = "";
@@ -63,7 +80,21 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadItems();
+        var authState = await AuthStateTask;
+        var userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (userId != null)
+        {
+            var foundId = await AccountRepo.GetAccountIdForUserAsync(userId);
+            if (foundId != null)
+            {
+                accountId = foundId.Value;
+                accountLinked = true;
+                await LoadItems();
+            }
+        }
+
+        loading = false;
     }
 
     private async Task SaveItem()
@@ -78,7 +109,7 @@ else
 
         try
         {
-            await Repo.AddAsync(testAccountId, newTitle.Trim(), newDescription.Trim());
+            await Repo.AddAsync(accountId, newTitle.Trim(), newDescription.Trim());
             newTitle = "";
             newDescription = "";
             await LoadItems();
@@ -93,7 +124,7 @@ else
     {
         try
         {
-            items = await Repo.GetForAccountAsync(testAccountId);
+            items = await Repo.GetForAccountAsync(accountId);
         }
         catch (Exception ex)
         {
@@ -114,7 +145,7 @@ else
         try
         {
             items = await Repo.SearchForAccountAsync(
-                testAccountId, searchText.Trim());
+                accountId, searchText.Trim());
         }
         catch (Exception ex)
         {
@@ -157,7 +188,7 @@ else
 
         try
         {
-            bool deleted = await Repo.DeleteAsync(item.LentItemID, testAccountId);
+            bool deleted = await Repo.DeleteAsync(item.LentItemID, accountId);
 
             if (!deleted)
             {
@@ -192,7 +223,7 @@ else
             try
             {
                 bool updated = await Repo.UpdateAsync(
-                    item.LentItemID, testAccountId, changes.Title, changes.Description);
+                    item.LentItemID, accountId, changes.Title, changes.Description);
 
                 if (!updated)
                 {
