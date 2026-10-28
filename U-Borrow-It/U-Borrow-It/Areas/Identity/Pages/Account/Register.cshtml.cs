@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using U_Borrow_It.Areas.Identity.Data;
+using U_Borrow_It.Core.Interfaces;
 
 namespace U_Borrow_It.Areas.Identity.Pages.Account
 {
@@ -30,13 +31,15 @@ namespace U_Borrow_It.Areas.Identity.Pages.Account
         private readonly IUserEmailStore<ApplicationUser> _emailStore;
         private readonly ILogger<RegisterModel> _logger;
         private readonly IEmailSender _emailSender;
+        private readonly IAccountRepository _accountRepository;
 
         public RegisterModel(
             UserManager<ApplicationUser> userManager,
             IUserStore<ApplicationUser> userStore,
             SignInManager<ApplicationUser> signInManager,
             ILogger<RegisterModel> logger,
-            IEmailSender emailSender)
+            IEmailSender emailSender,
+            IAccountRepository accountRepository)
         {
             _userManager = userManager;
             _userStore = userStore;
@@ -44,6 +47,7 @@ namespace U_Borrow_It.Areas.Identity.Pages.Account
             _signInManager = signInManager;
             _logger = logger;
             _emailSender = emailSender;
+            _accountRepository = accountRepository;
         }
 
         /// <summary>
@@ -71,6 +75,16 @@ namespace U_Borrow_It.Areas.Identity.Pages.Account
         /// </summary>
         public class InputModel
         {
+                        [Required]
+            [StringLength(30)]
+            [Display(Name = "First name")]
+            public string FirstName { get; set; }
+
+            [Required]
+            [StringLength(50)]
+            [Display(Name = "Last name")]
+            public string LastName { get; set; }
+
             /// <summary>
             ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
             ///     directly from your code. This API may change or be removed in future releases.
@@ -124,6 +138,19 @@ namespace U_Borrow_It.Areas.Identity.Pages.Account
                     _logger.LogInformation("User created a new account with password.");
 
                     var userId = await _userManager.GetUserIdAsync(user);
+
+                    try
+                    {
+                        await _accountRepository.CreateAsync(userId, Input.FirstName.Trim(), Input.LastName.Trim());
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Could not create Account for user {UserId}. Removing the login.", userId);
+                        await _userManager.DeleteAsync(user);
+                        ModelState.AddModelError(string.Empty, "Something went wrong while creating your account. Please try again.");
+                        return Page();
+                    }
+                    
                     var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
                     code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
                     var callbackUrl = Url.Page(

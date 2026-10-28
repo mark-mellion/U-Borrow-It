@@ -1,0 +1,46 @@
+<div class="account-menu">
+    <AuthorizeView>
+        <Authorized>
+            <span>Hello, @context.User.Identity?.Name</span>
+        </Authorized>
+    </AuthorizeView>
+
+    <button type="button" class="account-menu-button" @onclick="ToggleMenu"
+            aria-haspopup="true" aria-expanded="@(menuOpen ? "true" : "false")"
+            aria-label="Account menu">
+        <RadzenIcon Icon="account_circle" />
+        <RadzenIcon Icon="@(menuOpen ? "expand_less" : "expand_more")" />
+    </button>
+
+    @if (menuOpen)
+    {
+        <div class="account-menu-backdrop" @onclick="CloseMenu"></div>
+    }
+
+    <div class="account-menu-dropdown @(menuOpen ? "open" : "")" role="menu">
+        <AuthorizeView>
+            <Authorized>
+                <a class="account-menu-item" href="Identity/Account/Manage" target="_top" role="menuitem">
+                    Account settings
+                </a>
+                <form method="post" action="Identity/Account/Logout">
+                    <AntiforgeryToken />
+                    <input type="hidden" name="returnUrl" value="/" />
+                    <button type="submit" class="account-menu-item" role="menuitem">Log out</button>
+                </form>
+            </Authorized>
+            <NotAuthorized>
+                <a class="account-menu-item" href="Identity/Account/Login" target="_top" role="menuitem">Log in</a>
+                <a class="account-menu-item" href="Identity/Account/Register" target="_top" role="menuitem">Register</a>
+            </NotAuthorized>
+        </AuthorizeView>
+    </div>
+</div>
+
+@code {
+    private bool menuOpen = false;
+
+    private void ToggleMenu() => menuOpen = !menuOpen;
+
+    private void CloseMenu() => menuOpen = false;
+}

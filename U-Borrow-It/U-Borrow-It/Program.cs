@@ -28,6 +28,7 @@ builder.Services.AddRazorPages();
 
 builder.Services.AddRadzenComponents();
 builder.Services.AddScoped<ILentItemRepository>(_ => new LentItemRepository(connectionString));
+builder.Services.AddScoped<IAccountRepository>(_ => new AccountRepository(connectionString));
 builder.Services.AddCascadingAuthenticationState();
 
 var app = builder.Build();
