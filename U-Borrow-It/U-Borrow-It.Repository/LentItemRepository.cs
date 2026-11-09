@@ -4,6 +4,9 @@ using U_Borrow_It.Core.Interfaces;
 
 namespace U_Borrow_It.Repository;
 
+// Implements the database operations defined by ILentItemRepository.
+// Handles creating, retrieving, updating, deleting, and searching
+// items in SQL Server.
 public class LentItemRepository : ILentItemRepository
 {
     private readonly string _connectionString;
@@ -13,6 +16,9 @@ public class LentItemRepository : ILentItemRepository
         _connectionString = connectionString;
     }
 
+// Creates a new item in the SQL Server database.
+// Associates the item with the specified account ID.
+// New items are marked active and assigned the current date.
     public async Task AddAsync(Guid accountId, string title, string description)
     {
         const string sql = @"
@@ -57,6 +63,9 @@ public class LentItemRepository : ILentItemRepository
         return items;
     }
 
+// Performs a soft delete by setting Active to 0.
+// The item remains in the database but is excluded from normal item lists.
+// Returns true if an active item belonging to the account was updated.
         public async Task<bool> DeleteAsync(Guid lentItemId, Guid accountId)
     {
         const string sql = @"
@@ -95,7 +104,10 @@ public class LentItemRepository : ILentItemRepository
         int rowsAffected = await cmd.ExecuteNonQueryAsync();
         return rowsAffected > 0;
     }
-        
+
+// Searches for active items belonging to the specified account.
+// Uses CHARINDEX to find titles containing the search text.
+// Returns matching items ordered from newest to oldest.
 public async Task<List<LentItem>> SearchForAccountAsync(
     Guid accountId, string searchText)
 {
@@ -113,11 +125,17 @@ public async Task<List<LentItem>> SearchForAccountAsync(
             await conn.OpenAsync();
 
             await using var cmd = new SqlCommand(sql, conn);
+
+ // Bind the account ID and search text to the SQL parameters.
+// Parameters keep user input separate from the SQL command.
+
             cmd.Parameters.AddWithValue("@AccountID", accountId);
             cmd.Parameters.AddWithValue("@SearchText", searchText);
 
             await using var reader = await cmd.ExecuteReaderAsync();
 
+// Read each returned SQL row, convert it into a LentItem
+// object, and add it to the results list.
             while (await reader.ReadAsync())
             {
                 items.Add(new LentItem
