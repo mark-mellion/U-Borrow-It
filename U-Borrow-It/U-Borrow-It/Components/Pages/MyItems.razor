@@ -87,6 +87,11 @@ else
     private string activeSearch = "";
     private string searchText = "";
 
+
+// Runs when the page first loads.
+// Retrieves the signed-in user's identity and looks up
+// their associated AccountID in the database.
+// If the account exists, loads that account's items.
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateTask;
