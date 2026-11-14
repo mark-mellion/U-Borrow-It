@@ -12,14 +12,9 @@ public class NewLoan
     public string? LossPenalty { get; set; }
 }
 
-// Used to let users copy their previous loan policices
-public class PreviousLoan
+// The registered user a loan is being made to
+public class BorrowerAccount
 {
-    public Guid LoanID { get; set; }
-    public DateTime DateOfLoan { get; set; }
-    public string BorrowerName { get; set; } = "";
-    public string ItemTitles { get; set; } = "";
-    public string? ReturnConditionRequirements { get; set; }
-    public string? LateReturnPenalty { get; set; }
-    public string? LossPenalty { get; set; }
+    public Guid AccountID { get; set; }
+    public string Name { get; set; } = "";
 }
