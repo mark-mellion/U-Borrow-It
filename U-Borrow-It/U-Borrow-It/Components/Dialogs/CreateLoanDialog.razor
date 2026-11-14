@@ -1,0 +1,105 @@
+@using U_Borrow_It.Core.DTOs
+@using U_Borrow_It.Core.Interfaces
+@inject ILoanRepository LoanRepo
+@inject DialogService DialogService
+
+@if (loading)
+{
+    <RadzenText>Loading…</RadzenText>
+}
+else
+{
+    <RadzenStack Gap="1rem">
+        <RadzenFormField Text="Borrower's email" Style="width: 100%;">
+            <RadzenTextBox @bind-Value="borrowerEmail" MaxLength="256" />
+        </RadzenFormField>
+
+        <RadzenText TextStyle="TextStyle.Subtitle2">Items</RadzenText>
+        @if (availableItems.Count == 0)
+        {
+            <RadzenText>You have no items available to lend.</RadzenText>
+        }
+        else
+        {
+            <RadzenCheckBoxList @bind-Value="selectedItemIds" TValue="Guid" Data="availableItems"
+                                TextProperty="Title" ValueProperty="LentItemID"
+                                Orientation="Orientation.Vertical" />
+        }
+
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem">
+            <RadzenFormField Text="Loan date" Style="flex: 1;">
+                <RadzenDatePicker @bind-Value="dateOfLoan" DateFormat="d" />
+            </RadzenFormField>
+            <RadzenFormField Text="Expected return" Style="flex: 1;">
+                <RadzenDatePicker @bind-Value="dateOfExpectedReturn" DateFormat="d" />
+            </RadzenFormField>
+        </RadzenStack>
+
+        <RadzenFormField Text="Rental price (optional)" Style="width: 100%;">
+            <RadzenNumeric @bind-Value="rentalPrice" TValue="decimal?" Min="0" Format="0.00" />
+        </RadzenFormField>
+
+        <RadzenFormField Text="Return condition requirements (optional)" Style="width: 100%;">
+            <RadzenTextArea @bind-Value="returnConditionRequirements" MaxLength="2000" Rows="3"
+                            Style="width: 100%; resize: none;" />
+        </RadzenFormField>
+
+        <RadzenFormField Text="Late return penalty (optional)" Style="width: 100%;">
+            <RadzenTextArea @bind-Value="lateReturnPenalty" MaxLength="2000" Rows="3"
+                            Style="width: 100%; resize: none;" />
+        </RadzenFormField>
+
+        <RadzenFormField Text="Loss penalty (optional)" Style="width: 100%;">
+            <RadzenTextArea @bind-Value="lossPenalty" MaxLength="2000" Rows="3"
+                            Style="width: 100%; resize: none;" />
+        </RadzenFormField>
+
+        @if (errorMessage != "")
+        {
+            <RadzenText Style="color: var(--rz-danger);">@errorMessage</RadzenText>
+        }
+
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
+            <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="Cancel" />
+            @* Not wired up yet. *@
+            <RadzenButton Text="Generate contract" ButtonStyle="ButtonStyle.Primary" />
+        </RadzenStack>
+    </RadzenStack>
+}
+
+@code {
+    [Parameter]
+    public Guid AccountId { get; set; }
+
+    private bool loading = true;
+    private string errorMessage = "";
+
+    private List<LentItem> availableItems = new();
+    private IEnumerable<Guid> selectedItemIds = new List<Guid>();
+
+    private string borrowerEmail = "";
+    private DateTime dateOfLoan = DateTime.Today;
+    private DateTime dateOfExpectedReturn = DateTime.Today.AddDays(7);
+    private decimal? rentalPrice;
+    private string returnConditionRequirements = "";
+    private string lateReturnPenalty = "";
+    private string lossPenalty = "";
+
+// Loads the lender's items that aren't out on loan,
+// so they can be ticked in the checklist.
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            availableItems = await LoanRepo.GetAvailableItemsAsync(AccountId);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Could not load your items: " + ex.Message;
+        }
+
+        loading = false;
+    }
+
+    private void Cancel() => DialogService.Close();
+}   

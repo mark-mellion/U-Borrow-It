@@ -1,7 +1,9 @@
 @page "/active-loans"
 @using System.Security.Claims
 @using U_Borrow_It.Core.Interfaces
+@using U_Borrow_It.Components.Dialogs
 @inject IAccountRepository AccountRepo
+@inject DialogService DialogService
 
 <PageTitle>Active Loans</PageTitle>
 
@@ -17,6 +19,8 @@ else if (!accountLinked)
 }
 else
 {
+    <RadzenButton Text="New loan" Icon="add" ButtonStyle="ButtonStyle.Primary"
+                  Click="OpenCreateLoan" class="mb-3" />
     @if (errorMessage != "")
     {
         <p style="color: red;">@errorMessage</p>
@@ -58,5 +62,19 @@ else
         }
 
         loading = false;
+    }
+
+    private async Task OpenCreateLoan()
+    {
+        await DialogService.OpenAsync<CreateLoanDialog>(
+            "New loan",
+            new Dictionary<string, object> { { "AccountId", accountId } },
+            new DialogOptions
+            {
+                ShowClose = false,
+                CloseDialogOnOverlayClick = false,
+                CloseDialogOnEsc = false,
+                Width = "min(700px, calc(100vw - 4rem))"
+            });
     }
 }
