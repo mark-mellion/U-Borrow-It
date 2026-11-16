@@ -148,4 +148,45 @@ public class LoanRepository : ILoanRepository
     {
         return string.IsNullOrWhiteSpace(value) ? DBNull.Value : value.Trim();
     }
+
+    // Returns the lender's open loans with the borrower's name
+    // and the loaned item titles, ordered by due date.
+    public async Task<List<ActiveLoan>> GetActiveLoansAsync(Guid lenderId)
+    {
+        const string sql = @"
+            SELECT l.LoanID,
+                   CONCAT_WS(' ', a.FirstName, a.LastName) AS BorrowerName,
+                   items.ItemTitles,
+                   l.DateOfLoan,
+                   l.DateOfExpectedReturn
+            FROM dbo.Loan l
+            JOIN dbo.Account a ON a.AccountID = l.BorrowerAccountID
+            CROSS APPLY (
+                SELECT STRING_AGG(li.Title, ', ') WITHIN GROUP (ORDER BY li.Title) AS ItemTitles
+                FROM dbo.Loan_LentItem lli
+                JOIN dbo.LentItem li ON li.LentItemID = lli.LentItemID
+                WHERE lli.LoanID = l.LoanID) items
+            WHERE l.LenderID = @LenderID
+              AND l.DateReturned IS NULL
+            ORDER BY l.DateOfExpectedReturn;";
+
+        var loans = new List<ActiveLoan>();
+        await using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync();
+        await using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@LenderID", lenderId);
+        await using var reader = await cmd.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            loans.Add(new ActiveLoan
+            {
+                LoanID               = reader.GetGuid(0),
+                BorrowerName         = reader.GetString(1),
+                ItemTitles           = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                DateOfLoan           = reader.GetDateTime(3),
+                DateOfExpectedReturn = reader.GetDateTime(4)
+            });
+        }
+        return loans;
+    }
 }

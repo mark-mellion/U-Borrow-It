@@ -18,3 +18,13 @@ public class BorrowerAccount
     public Guid AccountID { get; set; }
     public string Name { get; set; } = "";
 }
+
+// A loan that hasn't been returned yet, for the Active Loans page.
+public class ActiveLoan
+{
+    public Guid LoanID { get; set; }
+    public string BorrowerName { get; set; } = "";
+    public string ItemTitles { get; set; } = "";
+    public DateTime DateOfLoan { get; set; }
+    public DateTime DateOfExpectedReturn { get; set; }
+}

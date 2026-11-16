@@ -2,8 +2,11 @@
 @using System.Security.Claims
 @using U_Borrow_It.Core.Interfaces
 @using U_Borrow_It.Components.Dialogs
+@using U_Borrow_It.Core.DTOs
+@inject ILoanRepository LoanRepo
 @inject IAccountRepository AccountRepo
 @inject DialogService DialogService
+
 
 <PageTitle>Active Loans</PageTitle>
 
@@ -30,7 +33,22 @@ else
         <p style="color: red;">@errorMessage</p>
     }
 
-    <p>You haven't made any loans yet.</p>
+    @if (loans.Count == 0)
+    {
+        <p>You don't have any active loans.</p>
+    }
+    else
+    {
+        <ul>
+            @foreach (var loan in loans)
+            {
+                <li>
+                    <strong>@loan.ItemTitles</strong> lent to @loan.BorrowerName,
+                    due @loan.DateOfExpectedReturn.ToShortDateString()
+                </li>
+            }
+        </ul>
+    }
 }
 
 @code {
@@ -42,6 +60,7 @@ else
     private bool loading = true;
     private string errorMessage = "";
     private string successMessage = "";
+    private List<ActiveLoan> loans = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -57,6 +76,7 @@ else
                 {
                     accountId = foundId.Value;
                     accountLinked = true;
+                    await LoadLoans();
                 }
             }
         }
@@ -88,6 +108,19 @@ else
         if (created is true)
         {
             successMessage = "Loan successfully created.";
+            await LoadLoans();
+        }
+    }
+
+    private async Task LoadLoans()
+    {
+        try
+        {
+            loans = await LoanRepo.GetActiveLoansAsync(accountId);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Could not load loans: " + ex.Message;
         }
     }
 }

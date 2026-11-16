@@ -10,4 +10,5 @@ public interface ILoanRepository
     // Returns the new LoanID, or null if any item is unavailable
     // or doesn't belong to the lender. Saves nothing in that case.
     Task<Guid?> CreateAsync(Guid lenderId, NewLoan loan);
+    Task<List<ActiveLoan>> GetActiveLoansAsync(Guid lenderId);
 }
