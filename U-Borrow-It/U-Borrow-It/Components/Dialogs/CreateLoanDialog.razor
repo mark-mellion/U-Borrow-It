@@ -82,8 +82,8 @@ else
 
             <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
                 <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="Cancel" />
-                @* Not wired up yet. *@
-                <RadzenButton Text="Generate contract" ButtonStyle="ButtonStyle.Primary" />
+                <RadzenButton Text="Generate contract" ButtonStyle="ButtonStyle.Primary" Click="CreateLoan"
+                              Disabled="@(saving || availableItems.Count == 0)" />
             </RadzenStack>
         </RadzenStack>
     </div>
@@ -109,21 +109,30 @@ else
     private string returnConditionRequirements = "";
     private string lateReturnPenalty = "";
     private string lossPenalty = "";
+    private bool saving = false;
 
 // Loads the lender's items that aren't out on loan,
 // so they can be ticked in the checklist.
-    protected override async Task OnInitializedAsync()
+        protected override async Task OnInitializedAsync()
+    {
+        await LoadAvailableItems();
+        loading = false;
+    }
+
+// Loads the lender's items that aren't out on loan.
+// Unselects any chosen item that is no longer available.
+    private async Task LoadAvailableItems()
     {
         try
         {
             availableItems = await LoanRepo.GetAvailableItemsAsync(AccountId);
+            var availableIds = availableItems.Select(i => i.LentItemID).ToHashSet();
+            selectedItemIds = selectedItemIds.Where(availableIds.Contains).ToList();
         }
         catch (Exception ex)
         {
             errorMessage = "Could not load your items: " + ex.Message;
         }
-
-        loading = false;
     }
 
     private void Cancel() => DialogService.Close();
@@ -182,6 +191,71 @@ else
         if (e.Key == "Enter" && !searchingBorrower)
         {
             await FindBorrower();
+        }
+    }
+
+// Checks the form, then saves the loan and its items.
+// Closes the dialog with true if the loan was created.
+    private async Task CreateLoan()
+    {
+        errorMessage = "";
+
+        if (borrower == null)
+        {
+            errorMessage = "Please find the borrower first.";
+            return;
+        }
+
+        if (!selectedItemIds.Any())
+        {
+            errorMessage = "Please select at least one item.";
+            return;
+        }
+
+        if (dateOfExpectedReturn < dateOfLoan)
+        {
+            errorMessage = "The expected return date can't be before the loan date.";
+            return;
+        }
+
+        if (rentalPrice < 0)
+        {
+            errorMessage = "The rental price can't be negative.";
+            return;
+        }
+
+        saving = true;
+
+        try
+        {
+            var loanId = await LoanRepo.CreateAsync(AccountId, new NewLoan
+            {
+                BorrowerAccountID = borrower.AccountID,
+                LentItemIDs = selectedItemIds.ToList(),
+                DateOfLoan = dateOfLoan,
+                DateOfExpectedReturn = dateOfExpectedReturn,
+                RentalPrice = rentalPrice,
+                ReturnConditionRequirements = returnConditionRequirements,
+                LateReturnPenalty = lateReturnPenalty,
+                LossPenalty = lossPenalty
+            });
+
+            if (loanId == null)
+            {
+                errorMessage = "One or more of those items is no longer available. The list has been refreshed.";
+                await LoadAvailableItems();
+                return;
+            }
+
+            DialogService.Close(true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Could not create loan: " + ex.Message;
+        }
+        finally
+        {
+            saving = false;
         }
     }
 }   

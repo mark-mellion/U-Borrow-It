@@ -21,6 +21,10 @@ else
 {
     <RadzenButton Text="New loan" Icon="add" ButtonStyle="ButtonStyle.Primary"
                   Click="OpenCreateLoan" class="mb-3" />
+    @if (successMessage != "")
+    {
+        <p style="color: green;">@successMessage</p>
+    }
     @if (errorMessage != "")
     {
         <p style="color: red;">@errorMessage</p>
@@ -37,6 +41,7 @@ else
     private bool accountLinked = false;
     private bool loading = true;
     private string errorMessage = "";
+    private string successMessage = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -66,7 +71,10 @@ else
 
     private async Task OpenCreateLoan()
     {
-        await DialogService.OpenAsync<CreateLoanDialog>(
+        errorMessage = "";
+        successMessage = "";
+
+        var created = await DialogService.OpenAsync<CreateLoanDialog>(
             "New loan",
             new Dictionary<string, object> { { "AccountId", accountId } },
             new DialogOptions
@@ -76,5 +84,10 @@ else
                 CloseDialogOnEsc = false,
                 Width = "min(700px, calc(100vw - 4rem))"
             });
+
+        if (created is true)
+        {
+            successMessage = "Loan successfully created.";
+        }
     }
 }
