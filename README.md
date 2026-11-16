@@ -1,20 +1,20 @@
-# Introduction 
-TODO: Give a short introduction of your project. Let this section explain the objectives or the motivation behind this project. 
+<h1>INFO ABOUT THIS BRANCH</h1>
 
-# Getting Started
-TODO: Guide users through getting your code up and running on their own system. In this section you can talk about:
-1.	Installation process
-2.	Software dependencies
-3.	Latest releases
-4.	API references
+Features implemented:
+- active loans page
+- create loan button and corresponding dialog
+- find borrower by email search
+- save loan to database
 
-# Build and Test
-TODO: Describe and show how to build your code and run the tests. 
+Features yet to be implemented:
+- view loans and loan details in active loans page
+- link the "generate contract" button to actually finalizing the details of the contract
+- setting new loans as "pending" until user confirms that the loan is actually active
+- setting a loan as closed
+- viewing loan history
+- copying loan details (return condition, late penalty, loss penalty) from previous loans into a new loan
 
-# Contribute
-TODO: Explain how other users and developers can contribute to make your code better. 
 
-If you want to learn more about creating good readme files then refer the following [guidelines](https://docs.microsoft.com/en-us/azure/devops/repos/git/create-a-readme?view=azure-devops). You can also seek inspiration from the below readme files:
-- [ASP.NET Core](https://github.com/aspnet/Home)
-- [Visual Studio Code](https://github.com/Microsoft/vscode)
-- [Chakra Core](https://github.com/Microsoft/ChakraCore)
+
+I will continue working on this. Marcus, the idea I have is to have the "generate contract" button go to a new page where users can select their contract template, input the final details of the loan, and email a copy the contract to the borrower to sign. The real "save loan" button should be there.
+Let me know your thoughts
