@@ -9,62 +9,68 @@
 }
 else
 {
-    <RadzenStack Gap="1rem">
-        <RadzenFormField Text="Borrower's email" Style="width: 100%;">
-            <RadzenTextBox @bind-Value="borrowerEmail" MaxLength="256" />
-        </RadzenFormField>
+    <div style="--rz-form-field-label-color: var(--rz-text-tertiary-color);">
+        <RadzenStack Gap="1rem">
+            <RadzenFormField Text="Borrower's email" Style="width: 100%;">
+                <RadzenTextBox @bind-Value="borrowerEmail" MaxLength="256" />
+            </RadzenFormField>
 
-        <RadzenText TextStyle="TextStyle.Subtitle2">Items</RadzenText>
         @if (availableItems.Count == 0)
         {
             <RadzenText>You have no items available to lend.</RadzenText>
         }
         else
         {
-            <RadzenCheckBoxList @bind-Value="selectedItemIds" TValue="Guid" Data="availableItems"
-                                TextProperty="Title" ValueProperty="LentItemID"
-                                Orientation="Orientation.Vertical" />
+            <RadzenFormField Text="Items" Style="width: 100%;">
+                <RadzenDropDown @bind-Value="selectedItemIds" TValue="IEnumerable<Guid>"
+                                Data="availableItems" TextProperty="Title" ValueProperty="LentItemID"
+                                Multiple="true" Chips="true"
+                                AllowFiltering="true"
+                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                FilterPlaceholder="Search items by name..." />
+            </RadzenFormField>
         }
 
-        <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem">
-            <RadzenFormField Text="Loan date" Style="flex: 1;">
-                <RadzenDatePicker @bind-Value="dateOfLoan" DateFormat="d" />
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem">
+                <RadzenFormField Text="Loan date" Style="flex: 1;">
+                    <RadzenDatePicker @bind-Value="dateOfLoan" DateFormat="d" />
+                </RadzenFormField>
+                <RadzenFormField Text="Expected return" Style="flex: 1;">
+                    <RadzenDatePicker @bind-Value="dateOfExpectedReturn" DateFormat="d" />
+                </RadzenFormField>
+            </RadzenStack>
+
+            <RadzenFormField Text="Rental price (optional)" Style="width: 100%;">
+                <RadzenNumeric @bind-Value="rentalPrice" TValue="decimal?" Min="0" Format="0.00" />
             </RadzenFormField>
-            <RadzenFormField Text="Expected return" Style="flex: 1;">
-                <RadzenDatePicker @bind-Value="dateOfExpectedReturn" DateFormat="d" />
+
+            <RadzenFormField Text="Return condition requirements (optional)" Style="width: 100%;">
+                <RadzenTextArea @bind-Value="returnConditionRequirements" MaxLength="2000" Rows="4"
+                            Style="width: 100%; resize: vertical;" />
             </RadzenFormField>
+
+            <RadzenFormField Text="Late return penalty (optional)" Style="width: 100%;">
+                <RadzenTextArea @bind-Value="lateReturnPenalty" MaxLength="2000" Rows="4"
+                            Style="width: 100%; resize: vertical;" />
+            </RadzenFormField>
+
+            <RadzenFormField Text="Loss penalty (optional)" Style="width: 100%;">
+                <RadzenTextArea @bind-Value="lossPenalty" MaxLength="2000" Rows="4"
+                            Style="width: 100%; resize: vertical;" />
+            </RadzenFormField>
+
+            @if (errorMessage != "")
+            {
+                <RadzenText Style="color: var(--rz-danger);">@errorMessage</RadzenText>
+            }
+
+            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
+                <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="Cancel" />
+                @* Not wired up yet. *@
+                <RadzenButton Text="Generate contract" ButtonStyle="ButtonStyle.Primary" />
+            </RadzenStack>
         </RadzenStack>
-
-        <RadzenFormField Text="Rental price (optional)" Style="width: 100%;">
-            <RadzenNumeric @bind-Value="rentalPrice" TValue="decimal?" Min="0" Format="0.00" />
-        </RadzenFormField>
-
-        <RadzenFormField Text="Return condition requirements (optional)" Style="width: 100%;">
-            <RadzenTextArea @bind-Value="returnConditionRequirements" MaxLength="2000" Rows="3"
-                            Style="width: 100%; resize: none;" />
-        </RadzenFormField>
-
-        <RadzenFormField Text="Late return penalty (optional)" Style="width: 100%;">
-            <RadzenTextArea @bind-Value="lateReturnPenalty" MaxLength="2000" Rows="3"
-                            Style="width: 100%; resize: none;" />
-        </RadzenFormField>
-
-        <RadzenFormField Text="Loss penalty (optional)" Style="width: 100%;">
-            <RadzenTextArea @bind-Value="lossPenalty" MaxLength="2000" Rows="3"
-                            Style="width: 100%; resize: none;" />
-        </RadzenFormField>
-
-        @if (errorMessage != "")
-        {
-            <RadzenText Style="color: var(--rz-danger);">@errorMessage</RadzenText>
-        }
-
-        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
-            <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="Cancel" />
-            @* Not wired up yet. *@
-            <RadzenButton Text="Generate contract" ButtonStyle="ButtonStyle.Primary" />
-        </RadzenStack>
-    </RadzenStack>
+    </div>
 }
 
 @code {
