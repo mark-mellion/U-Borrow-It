@@ -11,9 +11,25 @@ else
 {
     <div style="--rz-form-field-label-color: var(--rz-text-tertiary-color);">
         <RadzenStack Gap="1rem">
-            <RadzenFormField Text="Borrower's email" Style="width: 100%;">
-                <RadzenTextBox @bind-Value="borrowerEmail" MaxLength="256" />
-            </RadzenFormField>
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+            <div style="flex: 1;" @onkeydown="BorrowerEmailKeyDown">
+                <RadzenFormField Text="Borrower's email" Style="width: 100%;">
+                    <RadzenTextBox @bind-Value="borrowerEmail" Immediate="true"
+                                   Change="BorrowerEmailChanged" MaxLength="256" />
+                </RadzenFormField>
+            </div>
+            <RadzenButton Text="Find" ButtonStyle="ButtonStyle.Secondary" Click="FindBorrower"
+                    Disabled="@searchingBorrower" />
+        </RadzenStack>
+
+        @if (borrower != null)
+        {
+            <RadzenText>Lending to <strong>@borrower.Name</strong></RadzenText>
+        }
+        else if (borrowerError != "")
+        {
+            <RadzenText Style="color: var(--rz-danger);">@borrowerError</RadzenText>
+        }
 
         @if (availableItems.Count == 0)
         {
@@ -84,6 +100,9 @@ else
     private IEnumerable<Guid> selectedItemIds = new List<Guid>();
 
     private string borrowerEmail = "";
+    private BorrowerAccount? borrower;
+    private string borrowerError = "";
+    private bool searchingBorrower = false;
     private DateTime dateOfLoan = DateTime.Today;
     private DateTime dateOfExpectedReturn = DateTime.Today.AddDays(7);
     private decimal? rentalPrice;
@@ -108,4 +127,61 @@ else
     }
 
     private void Cancel() => DialogService.Close();
+
+// Editing the email clears the borrower
+    private void BorrowerEmailChanged(string _)
+    {
+        borrower = null;
+        borrowerError = "";
+    }
+
+// Looks up a registered user by their exact email address.
+    private async Task FindBorrower()
+    {
+        borrower = null;
+        borrowerError = "";
+
+        if (string.IsNullOrWhiteSpace(borrowerEmail))
+        {
+            borrowerError = "Please enter the borrower's email.";
+            return;
+        }
+
+        searchingBorrower = true;
+
+        try
+        {
+            var found = await LoanRepo.FindBorrowerByEmailAsync(borrowerEmail);
+
+            if (found == null)
+            {
+                borrowerError = "No account was found with that email.";
+            }
+            else if (found.AccountID == AccountId)
+            {
+                borrowerError = "You can't lend items to yourself.";
+            }
+            else
+            {
+                borrower = found;
+            }
+        }
+        catch (Exception ex)
+        {
+            borrowerError = "Could not look up borrower: " + ex.Message;
+        }
+        finally
+        {
+            searchingBorrower = false;
+        }
+    }
+
+    // Lets the lender press Enter in the email box instead of clicking Find
+    private async Task BorrowerEmailKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !searchingBorrower)
+        {
+            await FindBorrower();
+        }
+    }
 }   
