@@ -17,4 +17,5 @@ public interface ILoanRepository
     Task<bool> CloseAsync(Guid loanId, Guid lenderId, LoanReturn loanReturn);
 
     Task<LoanDetails?> GetDetailsAsync(Guid loanId, Guid lenderId);
+    Task<List<LoanHistoryEntry>> GetHistoryAsync(Guid lenderId);
 }

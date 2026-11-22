@@ -334,4 +334,47 @@ public class LoanRepository : ILoanRepository
             ReturnNotes                 = reader.IsDBNull(13) ? null : reader.GetString(13)
         };
     }
+
+    // Returns every loan the lender has made
+    public async Task<List<LoanHistoryEntry>> GetHistoryAsync(Guid lenderId)
+    {
+        const string sql = @"
+            SELECT l.LoanID,
+                   l.Status,
+                   CONCAT_WS(' ', a.FirstName, a.LastName) AS BorrowerName,
+                   items.ItemTitles,
+                   l.DateOfLoan,
+                   l.DateOfExpectedReturn,
+                   l.DateReturned
+            FROM dbo.Loan l
+            JOIN dbo.Account a ON a.AccountID = l.BorrowerAccountID
+            CROSS APPLY (
+                SELECT STRING_AGG(li.Title, ', ') WITHIN GROUP (ORDER BY li.Title) AS ItemTitles
+                FROM dbo.Loan_LentItem lli
+                JOIN dbo.LentItem li ON li.LentItemID = lli.LentItemID
+                WHERE lli.LoanID = l.LoanID) items
+            WHERE l.LenderID = @LenderID
+            ORDER BY l.DateOfLoan DESC;";
+
+        var loans = new List<LoanHistoryEntry>();
+        await using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync();
+        await using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@LenderID", lenderId);
+        await using var reader = await cmd.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            loans.Add(new LoanHistoryEntry
+            {
+                LoanID               = reader.GetGuid(0),
+                Status               = reader.GetString(1),
+                BorrowerName         = reader.GetString(2),
+                ItemTitles           = reader.IsDBNull(3) ? "" : reader.GetString(3),
+                DateOfLoan           = reader.GetDateTime(4),
+                DateOfExpectedReturn = reader.GetDateTime(5),
+                DateReturned         = reader.IsDBNull(6) ? null : reader.GetDateTime(6)
+            });
+        }
+        return loans;
+    }
 }

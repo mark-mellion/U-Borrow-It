@@ -63,3 +63,14 @@ public class LoanReturn
     public bool Damaged { get; set; }
     public string? Notes { get; set; }
 }
+
+public class LoanHistoryEntry
+{
+    public Guid LoanID { get; set; }
+    public string Status { get; set; } = "";
+    public string BorrowerName { get; set; } = "";
+    public string ItemTitles { get; set; } = "";
+    public DateTime DateOfLoan { get; set; }
+    public DateTime DateOfExpectedReturn { get; set; }
+    public DateTime? DateReturned { get; set; }
+}
