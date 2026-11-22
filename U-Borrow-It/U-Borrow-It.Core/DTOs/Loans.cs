@@ -19,7 +19,7 @@ public class BorrowerAccount
     public string Name { get; set; } = "";
 }
 
-// A loan that hasn't been returned yet, for the Active Loans page.
+// A loan that hasn't been returned yet, for the Active Loans page
 public class ActiveLoan
 {
     public Guid LoanID { get; set; }
@@ -36,4 +36,19 @@ public static class LoanStatuses
     public const string Active = "Active";
     public const string Closed = "Closed";
     public const string Canceled = "Canceled";
+}
+
+public class LoanDetails
+{
+    public Guid LoanID { get; set; }
+    public string Status { get; set; } = "";
+    public string BorrowerName { get; set; } = "";
+    public string ItemTitles { get; set; } = "";
+    public DateTime DateOfLoan { get; set; }
+    public DateTime DateOfExpectedReturn { get; set; }
+    public DateTime? DateReturned { get; set; }
+    public decimal? RentalPrice { get; set; }
+    public string? ReturnConditionRequirements { get; set; }
+    public string? LateReturnPenalty { get; set; }
+    public string? LossPenalty { get; set; }
 }

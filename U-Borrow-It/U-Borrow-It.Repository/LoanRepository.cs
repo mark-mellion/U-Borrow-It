@@ -228,4 +228,58 @@ public class LoanRepository : ILoanRepository
         int rowsAffected = await cmd.ExecuteNonQueryAsync();
         return rowsAffected > 0;
     }
+
+        // Returns every detail of one loan, including the borrower's
+    // name and item titles. Only finds loans the lender made.
+    public async Task<LoanDetails?> GetDetailsAsync(Guid loanId, Guid lenderId)
+    {
+        const string sql = @"
+            SELECT l.LoanID,
+                   l.Status,
+                   CONCAT_WS(' ', a.FirstName, a.LastName) AS BorrowerName,
+                   items.ItemTitles,
+                   l.DateOfLoan,
+                   l.DateOfExpectedReturn,
+                   l.DateReturned,
+                   l.RentalPrice,
+                   l.ReturnConditionRequirements,
+                   l.LateReturnPenalty,
+                   l.LossPenalty
+            FROM dbo.Loan l
+            JOIN dbo.Account a ON a.AccountID = l.BorrowerAccountID
+            CROSS APPLY (
+                SELECT STRING_AGG(li.Title, ', ') WITHIN GROUP (ORDER BY li.Title) AS ItemTitles
+                FROM dbo.Loan_LentItem lli
+                JOIN dbo.LentItem li ON li.LentItemID = lli.LentItemID
+                WHERE lli.LoanID = l.LoanID) items
+            WHERE l.LoanID = @LoanID
+              AND l.LenderID = @LenderID;";
+
+        await using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync();
+        await using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@LoanID", loanId);
+        cmd.Parameters.AddWithValue("@LenderID", lenderId);
+        await using var reader = await cmd.ExecuteReaderAsync();
+
+        if (!await reader.ReadAsync())
+        {
+            return null;
+        }
+
+        return new LoanDetails
+        {
+            LoanID                      = reader.GetGuid(0),
+            Status                      = reader.GetString(1),
+            BorrowerName                = reader.GetString(2),
+            ItemTitles                  = reader.IsDBNull(3) ? "" : reader.GetString(3),
+            DateOfLoan                  = reader.GetDateTime(4),
+            DateOfExpectedReturn        = reader.GetDateTime(5),
+            DateReturned                = reader.IsDBNull(6) ? null : reader.GetDateTime(6),
+            RentalPrice                 = reader.IsDBNull(7) ? null : reader.GetDecimal(7),
+            ReturnConditionRequirements = reader.IsDBNull(8) ? null : reader.GetString(8),
+            LateReturnPenalty           = reader.IsDBNull(9) ? null : reader.GetString(9),
+            LossPenalty                 = reader.IsDBNull(10) ? null : reader.GetString(10)
+        };
+    }
 }
