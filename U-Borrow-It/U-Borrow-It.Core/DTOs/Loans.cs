@@ -51,4 +51,15 @@ public class LoanDetails
     public string? ReturnConditionRequirements { get; set; }
     public string? LateReturnPenalty { get; set; }
     public string? LossPenalty { get; set; }
+    public bool? ReturnConditionsMet { get; set; }
+    public bool? ReturnedDamaged { get; set; }
+    public string? ReturnNotes { get; set; }
+}
+
+public class LoanReturn
+{
+    public DateTime DateReturned { get; set; }
+    public bool? ConditionsMet { get; set; }
+    public bool Damaged { get; set; }
+    public string? Notes { get; set; }
 }

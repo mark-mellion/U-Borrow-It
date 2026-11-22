@@ -14,7 +14,7 @@ public interface ILoanRepository
     
     Task<bool> ActivateAsync(Guid loanId, Guid lenderId);
     Task<bool> CancelAsync(Guid loanId, Guid lenderId);
-    Task<bool> CloseAsync(Guid loanId, Guid lenderId);
+    Task<bool> CloseAsync(Guid loanId, Guid lenderId, LoanReturn loanReturn);
 
     Task<LoanDetails?> GetDetailsAsync(Guid loanId, Guid lenderId);
 }

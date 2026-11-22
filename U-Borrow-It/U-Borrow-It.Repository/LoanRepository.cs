@@ -198,14 +198,60 @@ public class LoanRepository : ILoanRepository
     }
 
     public Task<bool> ActivateAsync(Guid loanId, Guid lenderId) =>
-    ChangeStatusAsync(loanId, lenderId, LoanStatuses.Pending, LoanStatuses.Active, setReturnDate: false);
+        ChangeStatusAsync(loanId, lenderId, LoanStatuses.Pending, LoanStatuses.Active);
 
     public Task<bool> CancelAsync(Guid loanId, Guid lenderId) =>
-        ChangeStatusAsync(loanId, lenderId, LoanStatuses.Pending, LoanStatuses.Canceled, setReturnDate: false);
+        ChangeStatusAsync(loanId, lenderId, LoanStatuses.Pending, LoanStatuses.Canceled);
 
-    public Task<bool> CloseAsync(Guid loanId, Guid lenderId) =>
-        ChangeStatusAsync(loanId, lenderId, LoanStatuses.Active, LoanStatuses.Closed, setReturnDate: true);
+    // Closes an active loan and records how it came back.
+    public async Task<bool> CloseAsync(Guid loanId, Guid lenderId, LoanReturn loanReturn)
+    {
+        const string sql = @"
+            UPDATE dbo.Loan
+            SET Status = @Closed,
+                DateReturned = @DateReturned,
+                ReturnConditionsMet = @ConditionsMet,
+                ReturnedDamaged = @Damaged,
+                ReturnNotes = @Notes
+            WHERE LoanID = @LoanID
+              AND LenderID = @LenderID
+              AND Status = @Active;";
 
+        await using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync();
+        await using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@Closed", LoanStatuses.Closed);
+        cmd.Parameters.AddWithValue("@Active", LoanStatuses.Active);
+        cmd.Parameters.AddWithValue("@DateReturned", loanReturn.DateReturned);
+        cmd.Parameters.AddWithValue("@ConditionsMet", (object?)loanReturn.ConditionsMet ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@Damaged", loanReturn.Damaged);
+        cmd.Parameters.AddWithValue("@Notes", ToDbValue(loanReturn.Notes));
+        cmd.Parameters.AddWithValue("@LoanID", loanId);
+        cmd.Parameters.AddWithValue("@LenderID", lenderId);
+        int rowsAffected = await cmd.ExecuteNonQueryAsync();
+        return rowsAffected > 0;
+    }
+
+    private async Task<bool> ChangeStatusAsync(
+        Guid loanId, Guid lenderId, string fromStatus, string toStatus)
+    {
+        const string sql = @"
+            UPDATE dbo.Loan
+            SET Status = @ToStatus
+            WHERE LoanID = @LoanID
+              AND LenderID = @LenderID
+              AND Status = @FromStatus;";
+
+        await using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync();
+        await using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@ToStatus", toStatus);
+        cmd.Parameters.AddWithValue("@LoanID", loanId);
+        cmd.Parameters.AddWithValue("@LenderID", lenderId);
+        cmd.Parameters.AddWithValue("@FromStatus", fromStatus);
+        int rowsAffected = await cmd.ExecuteNonQueryAsync();
+        return rowsAffected > 0;
+    }
     private async Task<bool> ChangeStatusAsync(
         Guid loanId, Guid lenderId, string fromStatus, string toStatus, bool setReturnDate)
     {
@@ -229,7 +275,7 @@ public class LoanRepository : ILoanRepository
         return rowsAffected > 0;
     }
 
-        // Returns every detail of one loan, including the borrower's
+    // Returns every detail of one loan, including the borrower's
     // name and item titles. Only finds loans the lender made.
     public async Task<LoanDetails?> GetDetailsAsync(Guid loanId, Guid lenderId)
     {
@@ -244,7 +290,10 @@ public class LoanRepository : ILoanRepository
                    l.RentalPrice,
                    l.ReturnConditionRequirements,
                    l.LateReturnPenalty,
-                   l.LossPenalty
+                   l.LossPenalty,
+                   l.ReturnConditionsMet,
+                   l.ReturnedDamaged,
+                   l.ReturnNotes
             FROM dbo.Loan l
             JOIN dbo.Account a ON a.AccountID = l.BorrowerAccountID
             CROSS APPLY (
@@ -279,7 +328,10 @@ public class LoanRepository : ILoanRepository
             RentalPrice                 = reader.IsDBNull(7) ? null : reader.GetDecimal(7),
             ReturnConditionRequirements = reader.IsDBNull(8) ? null : reader.GetString(8),
             LateReturnPenalty           = reader.IsDBNull(9) ? null : reader.GetString(9),
-            LossPenalty                 = reader.IsDBNull(10) ? null : reader.GetString(10)
+            LossPenalty                 = reader.IsDBNull(10) ? null : reader.GetString(10),
+            ReturnConditionsMet         = reader.IsDBNull(11) ? null : reader.GetBoolean(11),
+            ReturnedDamaged             = reader.IsDBNull(12) ? null : reader.GetBoolean(12),
+            ReturnNotes                 = reader.IsDBNull(13) ? null : reader.GetString(13)
         };
     }
 }
