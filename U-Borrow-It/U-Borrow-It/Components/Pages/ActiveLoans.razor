@@ -6,6 +6,7 @@
 @inject ILoanRepository LoanRepo
 @inject IAccountRepository AccountRepo
 @inject DialogService DialogService
+@inject NavigationManager Navigation
 
 
 <PageTitle>Active Loans</PageTitle>
@@ -22,8 +23,12 @@ else if (!accountLinked)
 }
 else
 {
-    <RadzenButton Text="New loan" Icon="add" ButtonStyle="ButtonStyle.Primary"
-                  Click="OpenCreateLoan" class="mb-3" />
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" class="mb-3">
+        <RadzenButton Text="New loan" Icon="add" ButtonStyle="ButtonStyle.Primary"
+                      Click="OpenCreateLoan" />
+        <RadzenButton Text="Loan history" Icon="history" ButtonStyle="ButtonStyle.Light"
+                      Click="@(() => Navigation.NavigateTo("loan-history"))" />
+    </RadzenStack>
     @if (successMessage != "")
     {
         <p style="color: green;">@successMessage</p>

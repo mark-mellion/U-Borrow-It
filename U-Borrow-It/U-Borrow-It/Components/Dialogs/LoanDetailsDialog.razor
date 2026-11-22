@@ -66,21 +66,24 @@
         </div>
     }
 
-    @if (Loan.Status == LoanStatuses.Pending)
+    @if (ShowActions)
     {
-        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
-            <RadzenButton Text="Cancel loan" Icon="cancel" ButtonStyle="ButtonStyle.Danger"
-                          Variant="Variant.Outlined" Click="@(() => DialogService.Close(LoanDetailsResult.Cancel))" />
-            <RadzenButton Text="Activate" Icon="check" ButtonStyle="ButtonStyle.Primary"
-                          Click="@(() => DialogService.Close(LoanDetailsResult.Activate))" />
-        </RadzenStack>
-    }
-    else if (Loan.Status == LoanStatuses.Active)
-    {
-        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
-            <RadzenButton Text="Close loan" Icon="assignment_turned_in" ButtonStyle="ButtonStyle.Primary"
-                          Click="@(() => DialogService.Close(LoanDetailsResult.Close))" />
-        </RadzenStack>
+        @if (Loan.Status == LoanStatuses.Pending)
+        {
+            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
+                <RadzenButton Text="Cancel loan" Icon="cancel" ButtonStyle="ButtonStyle.Danger"
+                            Variant="Variant.Outlined" Click="@(() => DialogService.Close(LoanDetailsResult.Cancel))" />
+                <RadzenButton Text="Activate" Icon="check" ButtonStyle="ButtonStyle.Primary"
+                            Click="@(() => DialogService.Close(LoanDetailsResult.Activate))" />
+            </RadzenStack>
+        }
+        else if (Loan.Status == LoanStatuses.Active)
+        {
+            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
+                <RadzenButton Text="Close loan" Icon="assignment_turned_in" ButtonStyle="ButtonStyle.Primary"
+                            Click="@(() => DialogService.Close(LoanDetailsResult.Close))" />
+            </RadzenStack>
+        }
     }
 </RadzenStack>
 
@@ -97,4 +100,7 @@
 
     private static string OrNone(string? text) =>
         string.IsNullOrWhiteSpace(text) ? "None" : text;
+
+    [Parameter]
+    public bool ShowActions { get; set; } = true;
 }
