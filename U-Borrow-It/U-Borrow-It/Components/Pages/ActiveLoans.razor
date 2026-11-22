@@ -47,6 +47,29 @@ else
                     <RadzenBadge Text="@label" BadgeStyle="@StatusStyle(label)" IsPill="true" />
                     <strong>@loan.ItemTitles</strong> lent to @loan.BorrowerName,
                     due @loan.DateOfExpectedReturn.ToShortDateString()
+
+                    @if (loan.Status == LoanStatuses.Pending)
+                    {
+                        <RadzenButton Text="Activate" Size="ButtonSize.ExtraSmall" Variant="Variant.Text"
+                                      ButtonStyle="ButtonStyle.Success"
+                                      Click="@(() => UpdateLoanStatus(
+                                          () => LoanRepo.ActivateAsync(loan.LoanID, accountId),
+                                          null, "Loan activated."))" />
+                        <RadzenButton Text="Cancel loan" Size="ButtonSize.ExtraSmall" Variant="Variant.Text"
+                                      ButtonStyle="ButtonStyle.Danger"
+                                      Click="@(() => UpdateLoanStatus(
+                                          () => LoanRepo.CancelAsync(loan.LoanID, accountId),
+                                          "Cancel this loan? Its items will become available again.",
+                                          "Loan canceled."))" />
+                    }
+                    else if (loan.Status == LoanStatuses.Active)
+                    {
+                        <RadzenButton Text="Close" Size="ButtonSize.ExtraSmall" Variant="Variant.Text"
+                                      Click="@(() => UpdateLoanStatus(
+                                          () => LoanRepo.CloseAsync(loan.LoanID, accountId),
+                                          "Mark this loan as returned and close it?",
+                                          "Loan closed."))" />
+                    }
                 </li>
             }
         </ul>
@@ -143,4 +166,41 @@ else
         "Active"  => BadgeStyle.Success,
         _ => BadgeStyle.Light
     };
+
+    private async Task UpdateLoanStatus(Func<Task<bool>> change, string? confirmMessage, string successText)
+    {
+        errorMessage = "";
+        successMessage = "";
+
+        if (confirmMessage != null)
+        {
+            var confirmed = await DialogService.Confirm(confirmMessage, "Are you sure?",
+                new ConfirmOptions { OkButtonText = "Yes", CancelButtonText = "No" });
+
+            if (confirmed != true)
+            {
+                return;
+            }
+        }
+
+        try
+        {
+            bool changed = await change();
+
+            if (changed)
+            {
+                successMessage = successText;
+            }
+            else
+            {
+                errorMessage = "That loan's status has already changed. The list has been refreshed.";
+            }
+
+            await LoadLoans();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Could not update loan: " + ex.Message;
+        }
+    }
 }
