@@ -122,7 +122,7 @@ public class LoanRepository : ILoanRepository
             loanCmd.Parameters.AddWithValue("@ReturnConditionRequirements", ToDbValue(loan.ReturnConditionRequirements));
             loanCmd.Parameters.AddWithValue("@LateReturnPenalty", ToDbValue(loan.LateReturnPenalty));
             loanCmd.Parameters.AddWithValue("@LossPenalty", ToDbValue(loan.LossPenalty));
-            loanCmd.Parameters.AddWithValue("@Status", LoanStatuses.Active);
+            loanCmd.Parameters.AddWithValue("@Status", LoanStatuses.Pending);
 
             loanId = (Guid)(await loanCmd.ExecuteScalarAsync())!;
         }
@@ -195,5 +195,37 @@ public class LoanRepository : ILoanRepository
             });
         }
         return loans;
+    }
+
+    public Task<bool> ActivateAsync(Guid loanId, Guid lenderId) =>
+    ChangeStatusAsync(loanId, lenderId, LoanStatuses.Pending, LoanStatuses.Active, setReturnDate: false);
+
+    public Task<bool> CancelAsync(Guid loanId, Guid lenderId) =>
+        ChangeStatusAsync(loanId, lenderId, LoanStatuses.Pending, LoanStatuses.Canceled, setReturnDate: false);
+
+    public Task<bool> CloseAsync(Guid loanId, Guid lenderId) =>
+        ChangeStatusAsync(loanId, lenderId, LoanStatuses.Active, LoanStatuses.Closed, setReturnDate: true);
+
+    private async Task<bool> ChangeStatusAsync(
+        Guid loanId, Guid lenderId, string fromStatus, string toStatus, bool setReturnDate)
+    {
+        const string sql = @"
+            UPDATE dbo.Loan
+            SET Status = @ToStatus,
+                DateReturned = CASE WHEN @SetReturnDate = 1 THEN GETDATE() ELSE DateReturned END
+            WHERE LoanID = @LoanID
+              AND LenderID = @LenderID
+              AND Status = @FromStatus;";
+
+        await using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync();
+        await using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@ToStatus", toStatus);
+        cmd.Parameters.AddWithValue("@SetReturnDate", setReturnDate);
+        cmd.Parameters.AddWithValue("@LoanID", loanId);
+        cmd.Parameters.AddWithValue("@LenderID", lenderId);
+        cmd.Parameters.AddWithValue("@FromStatus", fromStatus);
+        int rowsAffected = await cmd.ExecuteNonQueryAsync();
+        return rowsAffected > 0;
     }
 }
