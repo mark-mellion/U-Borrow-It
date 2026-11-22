@@ -42,7 +42,9 @@ else
         <ul>
             @foreach (var loan in loans)
             {
+                var label = StatusLabel(loan);
                 <li>
+                    <RadzenBadge Text="@label" BadgeStyle="@StatusStyle(label)" IsPill="true" />
                     <strong>@loan.ItemTitles</strong> lent to @loan.BorrowerName,
                     due @loan.DateOfExpectedReturn.ToShortDateString()
                 </li>
@@ -123,4 +125,22 @@ else
             errorMessage = "Could not load loans: " + ex.Message;
         }
     }
+
+    private static string StatusLabel(ActiveLoan loan) => loan.Status switch
+    {
+        LoanStatuses.Active when loan.DateOfExpectedReturn < DateTime.Today => "Overdue",
+        LoanStatuses.Pending  => "Pending",
+        LoanStatuses.Active   => "Active",
+        LoanStatuses.Closed   => "Closed",
+        LoanStatuses.Canceled => "Canceled",
+        _ => loan.Status
+    };
+
+    private static BadgeStyle StatusStyle(string label) => label switch
+    {
+        "Overdue" => BadgeStyle.Danger,
+        "Pending" => BadgeStyle.Warning,
+        "Active"  => BadgeStyle.Success,
+        _ => BadgeStyle.Light
+    };
 }
