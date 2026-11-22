@@ -49,6 +49,23 @@
         <RadzenText Style="white-space: pre-wrap;">@OrNone(Loan.LossPenalty)</RadzenText>
     </div>
 
+    @if (Loan.Status == LoanStatuses.Closed && Loan.DateReturned != null)
+    {
+        <div>
+            <RadzenText TextStyle="TextStyle.Subtitle2">Return</RadzenText>
+            <RadzenText>
+                @(Loan.DateReturned.Value.Date > Loan.DateOfExpectedReturn.Date ? "Returned late" : "Returned on time")
+                @(Loan.ReturnedDamaged == true ? " · Damaged" : "")
+                @(Loan.ReturnConditionsMet == true ? " · Conditions met"
+                  : Loan.ReturnConditionsMet == false ? " · Conditions not met" : "")
+            </RadzenText>
+            @if (!string.IsNullOrWhiteSpace(Loan.ReturnNotes))
+            {
+                <RadzenText Style="white-space: pre-wrap;">@Loan.ReturnNotes</RadzenText>
+            }
+        </div>
+    }
+
     @if (Loan.Status == LoanStatuses.Pending)
     {
         <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">

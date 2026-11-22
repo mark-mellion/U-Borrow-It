@@ -1,0 +1,88 @@
+@using U_Borrow_It.Core.DTOs
+@inject DialogService DialogService
+
+<RadzenStack Gap="1rem">
+    <RadzenFormField Text="Date returned" Style="width: 100%;">
+        <RadzenDatePicker @bind-Value="dateReturned" DateFormat="d" />
+    </RadzenFormField>
+
+    @if (hasRequirements)
+    {
+        <div>
+            <RadzenText TextStyle="TextStyle.Subtitle2">Return conditions met?</RadzenText>
+            <RadzenText Style="white-space: pre-wrap; color: var(--rz-text-secondary-color);">
+                @Loan.ReturnConditionRequirements
+            </RadzenText>
+            <RadzenRadioButtonList @bind-Value="conditionsMet" TValue="bool?">
+                <Items>
+                    <RadzenRadioButtonListItem TValue="bool?" Text="Yes" Value="@((bool?)true)" />
+                    <RadzenRadioButtonListItem TValue="bool?" Text="No" Value="@((bool?)false)" />
+                </Items>
+            </RadzenRadioButtonList>
+        </div>
+    }
+
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+        <RadzenCheckBox @bind-Value="damaged" Name="returnedDamaged" />
+        <RadzenLabel Text="Returned damaged" Component="returnedDamaged" />
+    </RadzenStack>
+
+    <RadzenFormField Text="Notes (optional)" Style="width: 100%;">
+        <RadzenTextArea @bind-Value="notes" MaxLength="2000" Rows="3"
+                        Style="width: 100%; resize: vertical;" />
+    </RadzenFormField>
+
+    @if (errorMessage != "")
+    {
+        <RadzenText Style="color: var(--rz-danger);">@errorMessage</RadzenText>
+    }
+
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
+        <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => DialogService.Close())" />
+        <RadzenButton Text="Close loan" ButtonStyle="ButtonStyle.Primary" Click="Confirm" />
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    [Parameter]
+    public LoanDetails Loan { get; set; } = default!;
+
+    private DateTime dateReturned = DateTime.Today;
+    private bool? conditionsMet;
+    private bool damaged = false;
+    private string notes = "";
+    private string errorMessage = "";
+
+    private bool hasRequirements => !string.IsNullOrWhiteSpace(Loan.ReturnConditionRequirements);
+
+    private void Confirm()
+    {
+        errorMessage = "";
+
+        if (dateReturned.Date < Loan.DateOfLoan.Date)
+        {
+            errorMessage = "The return date can't be before the loan date.";
+            return;
+        }
+
+        if (dateReturned.Date > DateTime.Today)
+        {
+            errorMessage = "The return date can't be in the future.";
+            return;
+        }
+
+        if (hasRequirements && conditionsMet == null)
+        {
+            errorMessage = "Please say whether the return conditions were met.";
+            return;
+        }
+
+        DialogService.Close(new LoanReturn
+        {
+            DateReturned = dateReturned.Date,
+            ConditionsMet = hasRequirements ? conditionsMet : null,
+            Damaged = damaged,
+            Notes = notes
+        });
+    }
+}

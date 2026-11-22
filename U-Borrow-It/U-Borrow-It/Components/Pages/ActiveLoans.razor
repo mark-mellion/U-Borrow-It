@@ -210,8 +210,22 @@ else
         }
         else if (result is LoanDetailsResult.Close)
         {
-            await UpdateLoanStatus(() => LoanRepo.CloseAsync(loan.LoanID, accountId),
-                "Mark this loan as returned and close it?", "Loan closed.");
+            var returned = await DialogService.OpenAsync<CloseLoanDialog>(
+                "Close loan",
+                new Dictionary<string, object> { { "Loan", details } },
+                new DialogOptions
+                {
+                    ShowClose = false,
+                    CloseDialogOnOverlayClick = false,
+                    CloseDialogOnEsc = true,
+                    Width = "min(600px, calc(100vw - 4rem))"
+                });
+
+            if (returned is LoanReturn loanReturn)
+            {
+                await UpdateLoanStatus(() => LoanRepo.CloseAsync(loan.LoanID, accountId, loanReturn),
+                    null, "Loan closed.");
+            }
         }
     }
 }
