@@ -42,8 +42,8 @@ public class LoanRepository : ILoanRepository
         return null;
     }
 
-    // Returns the lender's active items that are not on an open loan.
-    // *A loan is considered open until DateReturned is set
+    // Returns the lender's active items that aren't on a loan
+    // whose status reserves them (Pending or Active).
     public async Task<List<LentItem>> GetAvailableItemsAsync(Guid lenderId)
     {
         const string sql = @"
@@ -55,8 +55,9 @@ public class LoanRepository : ILoanRepository
                   SELECT 1
                   FROM dbo.Loan_LentItem lli
                   JOIN dbo.Loan l ON l.LoanID = lli.LoanID
+                  JOIN dbo.LoanStatus s ON s.Name = l.Status
                   WHERE lli.LentItemID = li.LentItemID
-                    AND l.DateReturned IS NULL)
+                    AND s.ReservesItems = 1)
             ORDER BY li.Title;";
 
         var items = new List<LentItem>();
@@ -85,10 +86,11 @@ public class LoanRepository : ILoanRepository
     {
         const string insertLoanSql = @"
             INSERT INTO dbo.Loan (LenderID, BorrowerAccountID, DateOfLoan, DateOfExpectedReturn,
-                                  RentalPrice, ReturnConditionRequirements, LateReturnPenalty, LossPenalty)
+                                  RentalPrice, ReturnConditionRequirements, LateReturnPenalty, LossPenalty, Status)
             OUTPUT inserted.LoanID
             VALUES (@LenderID, @BorrowerAccountID, @DateOfLoan, @DateOfExpectedReturn,
-                    @RentalPrice, @ReturnConditionRequirements, @LateReturnPenalty, @LossPenalty);";
+                    @RentalPrice, @ReturnConditionRequirements, @LateReturnPenalty, @LossPenalty,
+                    @Status);";
 
         const string insertItemSql = @"
             INSERT INTO dbo.Loan_LentItem (LoanID, LentItemID)
@@ -101,8 +103,9 @@ public class LoanRepository : ILoanRepository
                   SELECT 1
                   FROM dbo.Loan_LentItem lli
                   JOIN dbo.Loan l ON l.LoanID = lli.LoanID
+                  JOIN dbo.LoanStatus s ON s.Name = l.Status
                   WHERE lli.LentItemID = li.LentItemID
-                    AND l.DateReturned IS NULL);";
+                    AND s.ReservesItems = 1)";
 
         await using var conn = new SqlConnection(_connectionString);
         await conn.OpenAsync();
@@ -119,6 +122,7 @@ public class LoanRepository : ILoanRepository
             loanCmd.Parameters.AddWithValue("@ReturnConditionRequirements", ToDbValue(loan.ReturnConditionRequirements));
             loanCmd.Parameters.AddWithValue("@LateReturnPenalty", ToDbValue(loan.LateReturnPenalty));
             loanCmd.Parameters.AddWithValue("@LossPenalty", ToDbValue(loan.LossPenalty));
+            loanCmd.Parameters.AddWithValue("@Status", LoanStatuses.Active);
 
             loanId = (Guid)(await loanCmd.ExecuteScalarAsync())!;
         }
@@ -158,16 +162,18 @@ public class LoanRepository : ILoanRepository
                    CONCAT_WS(' ', a.FirstName, a.LastName) AS BorrowerName,
                    items.ItemTitles,
                    l.DateOfLoan,
-                   l.DateOfExpectedReturn
+                   l.DateOfExpectedReturn,
+                   l.Status
             FROM dbo.Loan l
             JOIN dbo.Account a ON a.AccountID = l.BorrowerAccountID
+            JOIN dbo.LoanStatus s ON s.Name = l.Status
             CROSS APPLY (
                 SELECT STRING_AGG(li.Title, ', ') WITHIN GROUP (ORDER BY li.Title) AS ItemTitles
                 FROM dbo.Loan_LentItem lli
                 JOIN dbo.LentItem li ON li.LentItemID = lli.LentItemID
                 WHERE lli.LoanID = l.LoanID) items
             WHERE l.LenderID = @LenderID
-              AND l.DateReturned IS NULL
+              AND s.ReservesItems = 1
             ORDER BY l.DateOfExpectedReturn;";
 
         var loans = new List<ActiveLoan>();
@@ -184,7 +190,8 @@ public class LoanRepository : ILoanRepository
                 BorrowerName         = reader.GetString(1),
                 ItemTitles           = reader.IsDBNull(2) ? "" : reader.GetString(2),
                 DateOfLoan           = reader.GetDateTime(3),
-                DateOfExpectedReturn = reader.GetDateTime(4)
+                DateOfExpectedReturn = reader.GetDateTime(4),
+                Status               = reader.GetString(5)
             });
         }
         return loans;

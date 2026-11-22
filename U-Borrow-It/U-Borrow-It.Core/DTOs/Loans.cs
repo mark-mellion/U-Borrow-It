@@ -27,4 +27,13 @@ public class ActiveLoan
     public string ItemTitles { get; set; } = "";
     public DateTime DateOfLoan { get; set; }
     public DateTime DateOfExpectedReturn { get; set; }
+    public string Status { get; set; } = "";
+}
+
+public static class LoanStatuses
+{
+    public const string Pending = "Pending";
+    public const string Active = "Active";
+    public const string Closed = "Closed";
+    public const string Canceled = "Canceled";
 }
