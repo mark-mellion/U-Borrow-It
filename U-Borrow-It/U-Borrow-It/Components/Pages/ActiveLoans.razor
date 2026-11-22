@@ -42,34 +42,13 @@ else
         <ul>
             @foreach (var loan in loans)
             {
-                var label = StatusLabel(loan);
+                var label = LoanStatusDisplay.Label(loan.Status, loan.DateOfExpectedReturn);
                 <li>
-                    <RadzenBadge Text="@label" BadgeStyle="@StatusStyle(label)" IsPill="true" />
-                    <strong>@loan.ItemTitles</strong> lent to @loan.BorrowerName,
-                    due @loan.DateOfExpectedReturn.ToShortDateString()
-
-                    @if (loan.Status == LoanStatuses.Pending)
-                    {
-                        <RadzenButton Text="Activate" Size="ButtonSize.ExtraSmall" Variant="Variant.Text"
-                                      ButtonStyle="ButtonStyle.Success"
-                                      Click="@(() => UpdateLoanStatus(
-                                          () => LoanRepo.ActivateAsync(loan.LoanID, accountId),
-                                          null, "Loan activated."))" />
-                        <RadzenButton Text="Cancel loan" Size="ButtonSize.ExtraSmall" Variant="Variant.Text"
-                                      ButtonStyle="ButtonStyle.Danger"
-                                      Click="@(() => UpdateLoanStatus(
-                                          () => LoanRepo.CancelAsync(loan.LoanID, accountId),
-                                          "Cancel this loan? Its items will become available again.",
-                                          "Loan canceled."))" />
-                    }
-                    else if (loan.Status == LoanStatuses.Active)
-                    {
-                        <RadzenButton Text="Close" Size="ButtonSize.ExtraSmall" Variant="Variant.Text"
-                                      Click="@(() => UpdateLoanStatus(
-                                          () => LoanRepo.CloseAsync(loan.LoanID, accountId),
-                                          "Mark this loan as returned and close it?",
-                                          "Loan closed."))" />
-                    }
+                    <RadzenBadge Text="@label" BadgeStyle="@LoanStatusDisplay.Style(label)" IsPill="true" />
+                    <button class="btn btn-link p-0" @onclick="() => OpenDetails(loan)">
+                        @loan.ItemTitles
+                    </button>
+                    lent to @loan.BorrowerName, due @loan.DateOfExpectedReturn.ToShortDateString()
                 </li>
             }
         </ul>
@@ -149,24 +128,6 @@ else
         }
     }
 
-    private static string StatusLabel(ActiveLoan loan) => loan.Status switch
-    {
-        LoanStatuses.Active when loan.DateOfExpectedReturn < DateTime.Today => "Overdue",
-        LoanStatuses.Pending  => "Pending",
-        LoanStatuses.Active   => "Active",
-        LoanStatuses.Closed   => "Closed",
-        LoanStatuses.Canceled => "Canceled",
-        _ => loan.Status
-    };
-
-    private static BadgeStyle StatusStyle(string label) => label switch
-    {
-        "Overdue" => BadgeStyle.Danger,
-        "Pending" => BadgeStyle.Warning,
-        "Active"  => BadgeStyle.Success,
-        _ => BadgeStyle.Light
-    };
-
     private async Task UpdateLoanStatus(Func<Task<bool>> change, string? confirmMessage, string successText)
     {
         errorMessage = "";
@@ -201,6 +162,56 @@ else
         catch (Exception ex)
         {
             errorMessage = "Could not update loan: " + ex.Message;
+        }
+    }
+
+    private async Task OpenDetails(ActiveLoan loan)
+    {
+        errorMessage = "";
+        successMessage = "";
+
+        LoanDetails? details;
+        try
+        {
+            details = await LoanRepo.GetDetailsAsync(loan.LoanID, accountId);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Could not load loan: " + ex.Message;
+            return;
+        }
+
+        if (details == null)
+        {
+            errorMessage = "That loan couldn't be found.";
+            await LoadLoans();
+            return;
+        }
+
+        var result = await DialogService.OpenAsync<LoanDetailsDialog>(
+            details.ItemTitles,
+            new Dictionary<string, object> { { "Loan", details } },
+            new DialogOptions
+            {
+                ShowClose = true,
+                CloseDialogOnOverlayClick = true,
+                Width = "min(700px, calc(100vw - 4rem))"
+            });
+
+        if (result is LoanDetailsResult.Activate)
+        {
+            await UpdateLoanStatus(() => LoanRepo.ActivateAsync(loan.LoanID, accountId),
+                null, "Loan activated.");
+        }
+        else if (result is LoanDetailsResult.Cancel)
+        {
+            await UpdateLoanStatus(() => LoanRepo.CancelAsync(loan.LoanID, accountId),
+                "Cancel this loan? Its items will become available again.", "Loan canceled.");
+        }
+        else if (result is LoanDetailsResult.Close)
+        {
+            await UpdateLoanStatus(() => LoanRepo.CloseAsync(loan.LoanID, accountId),
+                "Mark this loan as returned and close it?", "Loan closed.");
         }
     }
 }
