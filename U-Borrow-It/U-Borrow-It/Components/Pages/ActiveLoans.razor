@@ -1,0 +1,237 @@
+@page "/active-loans"
+@attribute [Authorize]
+@using System.Security.Claims
+@using U_Borrow_It.Core.Interfaces
+@using U_Borrow_It.Components.Dialogs
+@using U_Borrow_It.Core.DTOs
+@inject ILoanRepository LoanRepo
+@inject IAccountRepository AccountRepo
+@inject DialogService DialogService
+@inject NavigationManager Navigation
+
+
+<PageTitle>Active Loans</PageTitle>
+
+<h3>Active Loans</h3>
+
+@if (loading)
+{
+    <p>Loading…</p>
+}
+else if (!accountLinked)
+{
+    <p>Your login isn't linked to an account yet, so there are no loans to show. Please contact an administrator.</p>
+}
+else
+{
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" class="mb-3">
+        <RadzenButton Text="New loan" Icon="add" ButtonStyle="ButtonStyle.Primary"
+                      Click="OpenCreateLoan" />
+        <RadzenButton Text="Loan history" Icon="history" ButtonStyle="ButtonStyle.Light"
+                      Click="@(() => Navigation.NavigateTo("loan-history"))" />
+    </RadzenStack>
+    @if (successMessage != "")
+    {
+        <p style="color: green;">@successMessage</p>
+    }
+    @if (errorMessage != "")
+    {
+        <p style="color: red;">@errorMessage</p>
+    }
+
+    @if (loans.Count == 0)
+    {
+        <p>You don't have any active loans.</p>
+    }
+    else
+    {
+        <ul>
+            @foreach (var loan in loans)
+            {
+                var label = LoanStatusDisplay.Label(loan.Status, loan.DateOfExpectedReturn);
+                <li>
+                    <RadzenBadge Text="@label" BadgeStyle="@LoanStatusDisplay.Style(label)" IsPill="true" />
+                    <button class="btn btn-link p-0" @onclick="() => OpenDetails(loan)">
+                        @loan.ItemTitles
+                    </button>
+                    lent to @loan.BorrowerName, due @loan.DateOfExpectedReturn.ToShortDateString()
+                </li>
+            }
+        </ul>
+    }
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+
+    private Guid accountId;
+    private bool accountLinked = false;
+    private bool loading = true;
+    private string errorMessage = "";
+    private string successMessage = "";
+    private List<ActiveLoan> loans = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthStateTask;
+            var userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (userId != null)
+            {
+                var foundId = await AccountRepo.GetAccountIdForUserAsync(userId);
+                if (foundId != null)
+                {
+                    accountId = foundId.Value;
+                    accountLinked = true;
+                    await LoadLoans();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Could not load your account: " + ex.Message;
+            accountLinked = true; // Show the error instead of the "not linked" message
+        }
+
+        loading = false;
+    }
+
+    private async Task OpenCreateLoan()
+    {
+        errorMessage = "";
+        successMessage = "";
+
+        var created = await DialogService.OpenAsync<CreateLoanDialog>(
+            "New loan",
+            new Dictionary<string, object> { { "AccountId", accountId } },
+            new DialogOptions
+            {
+                ShowClose = false,
+                CloseDialogOnOverlayClick = false,
+                CloseDialogOnEsc = false,
+                Width = "min(700px, calc(100vw - 4rem))"
+            });
+
+        if (created is true)
+        {
+            successMessage = "Loan successfully created.";
+            await LoadLoans();
+        }
+    }
+
+    private async Task LoadLoans()
+    {
+        try
+        {
+            loans = await LoanRepo.GetActiveLoansAsync(accountId);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Could not load loans: " + ex.Message;
+        }
+    }
+
+    private async Task UpdateLoanStatus(Func<Task<bool>> change, string? confirmMessage, string successText)
+    {
+        errorMessage = "";
+        successMessage = "";
+
+        if (confirmMessage != null)
+        {
+            var confirmed = await DialogService.Confirm(confirmMessage, "Are you sure?",
+                new ConfirmOptions { OkButtonText = "Yes", CancelButtonText = "No" });
+
+            if (confirmed != true)
+            {
+                return;
+            }
+        }
+
+        try
+        {
+            bool changed = await change();
+
+            if (changed)
+            {
+                successMessage = successText;
+            }
+            else
+            {
+                errorMessage = "That loan's status has already changed. The list has been refreshed.";
+            }
+
+            await LoadLoans();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Could not update loan: " + ex.Message;
+        }
+    }
+
+    private async Task OpenDetails(ActiveLoan loan)
+    {
+        errorMessage = "";
+        successMessage = "";
+
+        LoanDetails? details;
+        try
+        {
+            details = await LoanRepo.GetDetailsAsync(loan.LoanID, accountId);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Could not load loan: " + ex.Message;
+            return;
+        }
+
+        if (details == null)
+        {
+            errorMessage = "That loan couldn't be found.";
+            await LoadLoans();
+            return;
+        }
+
+        var result = await DialogService.OpenAsync<LoanDetailsDialog>(
+            details.ItemTitles,
+            new Dictionary<string, object> { { "Loan", details } },
+            new DialogOptions
+            {
+                ShowClose = true,
+                CloseDialogOnOverlayClick = true,
+                Width = "min(700px, calc(100vw - 4rem))"
+            });
+
+        if (result is LoanDetailsResult.Activate)
+        {
+            await UpdateLoanStatus(() => LoanRepo.ActivateAsync(loan.LoanID, accountId),
+                null, "Loan activated.");
+        }
+        else if (result is LoanDetailsResult.Cancel)
+        {
+            await UpdateLoanStatus(() => LoanRepo.CancelAsync(loan.LoanID, accountId),
+                "Cancel this loan? Its items will become available again.", "Loan canceled.");
+        }
+        else if (result is LoanDetailsResult.Close)
+        {
+            var returned = await DialogService.OpenAsync<CloseLoanDialog>(
+                "Close loan",
+                new Dictionary<string, object> { { "Loan", details } },
+                new DialogOptions
+                {
+                    ShowClose = false,
+                    CloseDialogOnOverlayClick = false,
+                    CloseDialogOnEsc = true,
+                    Width = "min(600px, calc(100vw - 4rem))"
+                });
+
+            if (returned is LoanReturn loanReturn)
+            {
+                await UpdateLoanStatus(() => LoanRepo.CloseAsync(loan.LoanID, accountId, loanReturn),
+                    null, "Loan closed.");
+            }
+        }
+    }
+}

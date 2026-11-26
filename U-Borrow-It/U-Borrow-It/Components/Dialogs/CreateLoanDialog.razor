@@ -1,0 +1,261 @@
+@using U_Borrow_It.Core.DTOs
+@using U_Borrow_It.Core.Interfaces
+@inject ILoanRepository LoanRepo
+@inject DialogService DialogService
+
+@if (loading)
+{
+    <RadzenText>Loading…</RadzenText>
+}
+else
+{
+    <div style="--rz-form-field-label-color: var(--rz-text-tertiary-color);">
+        <RadzenStack Gap="1rem">
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+            <div style="flex: 1;" @onkeydown="BorrowerEmailKeyDown">
+                <RadzenFormField Text="Borrower's email" Style="width: 100%;">
+                    <RadzenTextBox @bind-Value="borrowerEmail" Immediate="true"
+                                   Change="BorrowerEmailChanged" MaxLength="256" />
+                </RadzenFormField>
+            </div>
+            <RadzenButton Text="Find" ButtonStyle="ButtonStyle.Secondary" Click="FindBorrower"
+                    Disabled="@searchingBorrower" />
+        </RadzenStack>
+
+        @if (borrower != null)
+        {
+            <RadzenText>Lending to <strong>@borrower.Name</strong></RadzenText>
+        }
+        else if (borrowerError != "")
+        {
+            <RadzenText Style="color: var(--rz-danger);">@borrowerError</RadzenText>
+        }
+
+        @if (availableItems.Count == 0)
+        {
+            <RadzenText>You have no items available to lend.</RadzenText>
+        }
+        else
+        {
+            <RadzenFormField Text="Items" Style="width: 100%;">
+                <RadzenDropDown @bind-Value="selectedItemIds" TValue="IEnumerable<Guid>"
+                                Data="availableItems" TextProperty="Title" ValueProperty="LentItemID"
+                                Multiple="true" Chips="true"
+                                AllowFiltering="true"
+                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                FilterPlaceholder="Search items by name..." />
+            </RadzenFormField>
+        }
+
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem">
+                <RadzenFormField Text="Loan date" Style="flex: 1;">
+                    <RadzenDatePicker @bind-Value="dateOfLoan" DateFormat="d" />
+                </RadzenFormField>
+                <RadzenFormField Text="Expected return" Style="flex: 1;">
+                    <RadzenDatePicker @bind-Value="dateOfExpectedReturn" DateFormat="d" />
+                </RadzenFormField>
+            </RadzenStack>
+
+            <RadzenFormField Text="Rental price (optional)" Style="width: 100%;">
+                <RadzenNumeric @bind-Value="rentalPrice" TValue="decimal?" Min="0" Format="0.00" />
+            </RadzenFormField>
+
+            <RadzenFormField Text="Return condition requirements (optional)" Style="width: 100%;">
+                <RadzenTextArea @bind-Value="returnConditionRequirements" MaxLength="2000" Rows="4"
+                            Style="width: 100%; resize: vertical;" />
+            </RadzenFormField>
+
+            <RadzenFormField Text="Late return penalty (optional)" Style="width: 100%;">
+                <RadzenTextArea @bind-Value="lateReturnPenalty" MaxLength="2000" Rows="4"
+                            Style="width: 100%; resize: vertical;" />
+            </RadzenFormField>
+
+            <RadzenFormField Text="Loss penalty (optional)" Style="width: 100%;">
+                <RadzenTextArea @bind-Value="lossPenalty" MaxLength="2000" Rows="4"
+                            Style="width: 100%; resize: vertical;" />
+            </RadzenFormField>
+
+            @if (errorMessage != "")
+            {
+                <RadzenText Style="color: var(--rz-danger);">@errorMessage</RadzenText>
+            }
+
+            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
+                <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="Cancel" />
+                <RadzenButton Text="Generate contract" ButtonStyle="ButtonStyle.Primary" Click="CreateLoan"
+                              Disabled="@(saving || availableItems.Count == 0)" />
+            </RadzenStack>
+        </RadzenStack>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public Guid AccountId { get; set; }
+
+    private bool loading = true;
+    private string errorMessage = "";
+
+    private List<LentItem> availableItems = new();
+    private IEnumerable<Guid> selectedItemIds = new List<Guid>();
+
+    private string borrowerEmail = "";
+    private BorrowerAccount? borrower;
+    private string borrowerError = "";
+    private bool searchingBorrower = false;
+    private DateTime dateOfLoan = DateTime.Today;
+    private DateTime dateOfExpectedReturn = DateTime.Today.AddDays(7);
+    private decimal? rentalPrice;
+    private string returnConditionRequirements = "";
+    private string lateReturnPenalty = "";
+    private string lossPenalty = "";
+    private bool saving = false;
+
+// Loads the lender's items that aren't out on loan,
+// so they can be ticked in the checklist.
+        protected override async Task OnInitializedAsync()
+    {
+        await LoadAvailableItems();
+        loading = false;
+    }
+
+// Loads the lender's items that aren't out on loan.
+// Unselects any chosen item that is no longer available.
+    private async Task LoadAvailableItems()
+    {
+        try
+        {
+            availableItems = await LoanRepo.GetAvailableItemsAsync(AccountId);
+            var availableIds = availableItems.Select(i => i.LentItemID).ToHashSet();
+            selectedItemIds = selectedItemIds.Where(availableIds.Contains).ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Could not load your items: " + ex.Message;
+        }
+    }
+
+    private void Cancel() => DialogService.Close();
+
+// Editing the email clears the borrower
+    private void BorrowerEmailChanged(string _)
+    {
+        borrower = null;
+        borrowerError = "";
+    }
+
+// Looks up a registered user by their exact email address.
+    private async Task FindBorrower()
+    {
+        borrower = null;
+        borrowerError = "";
+
+        if (string.IsNullOrWhiteSpace(borrowerEmail))
+        {
+            borrowerError = "Please enter the borrower's email.";
+            return;
+        }
+
+        searchingBorrower = true;
+
+        try
+        {
+            var found = await LoanRepo.FindBorrowerByEmailAsync(borrowerEmail);
+
+            if (found == null)
+            {
+                borrowerError = "No account was found with that email.";
+            }
+            else if (found.AccountID == AccountId)
+            {
+                borrowerError = "You can't lend items to yourself.";
+            }
+            else
+            {
+                borrower = found;
+            }
+        }
+        catch (Exception ex)
+        {
+            borrowerError = "Could not look up borrower: " + ex.Message;
+        }
+        finally
+        {
+            searchingBorrower = false;
+        }
+    }
+
+    // Lets the lender press Enter in the email box instead of clicking Find
+    private async Task BorrowerEmailKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !searchingBorrower)
+        {
+            await FindBorrower();
+        }
+    }
+
+// Checks the form, then saves the loan and its items.
+// Closes the dialog with true if the loan was created.
+    private async Task CreateLoan()
+    {
+        errorMessage = "";
+
+        if (borrower == null)
+        {
+            errorMessage = "Please find the borrower first.";
+            return;
+        }
+
+        if (!selectedItemIds.Any())
+        {
+            errorMessage = "Please select at least one item.";
+            return;
+        }
+
+        if (dateOfExpectedReturn < dateOfLoan)
+        {
+            errorMessage = "The expected return date can't be before the loan date.";
+            return;
+        }
+
+        if (rentalPrice < 0)
+        {
+            errorMessage = "The rental price can't be negative.";
+            return;
+        }
+
+        saving = true;
+
+        try
+        {
+            var loanId = await LoanRepo.CreateAsync(AccountId, new NewLoan
+            {
+                BorrowerAccountID = borrower.AccountID,
+                LentItemIDs = selectedItemIds.ToList(),
+                DateOfLoan = dateOfLoan,
+                DateOfExpectedReturn = dateOfExpectedReturn,
+                RentalPrice = rentalPrice,
+                ReturnConditionRequirements = returnConditionRequirements,
+                LateReturnPenalty = lateReturnPenalty,
+                LossPenalty = lossPenalty
+            });
+
+            if (loanId == null)
+            {
+                errorMessage = "One or more of those items is no longer available. The list has been refreshed.";
+                await LoadAvailableItems();
+                return;
+            }
+
+            DialogService.Close(true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Could not create loan: " + ex.Message;
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+}   

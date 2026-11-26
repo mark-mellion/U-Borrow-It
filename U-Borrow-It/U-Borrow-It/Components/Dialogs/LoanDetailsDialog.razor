@@ -1,0 +1,106 @@
+@using U_Borrow_It.Core.DTOs
+@inject DialogService DialogService
+
+<RadzenStack Gap="1rem">
+    <div>
+        <RadzenBadge Text="@label" BadgeStyle="@LoanStatusDisplay.Style(label)" IsPill="true" />
+    </div>
+
+    <div>
+        <RadzenText TextStyle="TextStyle.Subtitle2">Borrower</RadzenText>
+        <RadzenText>@Loan.BorrowerName</RadzenText>
+    </div>
+
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="2rem">
+        <div>
+            <RadzenText TextStyle="TextStyle.Subtitle2">Loan date</RadzenText>
+            <RadzenText>@Loan.DateOfLoan.ToLongDateString()</RadzenText>
+        </div>
+        <div>
+            <RadzenText TextStyle="TextStyle.Subtitle2">Expected return</RadzenText>
+            <RadzenText>@Loan.DateOfExpectedReturn.ToLongDateString()</RadzenText>
+        </div>
+        @if (Loan.DateReturned != null)
+        {
+            <div>
+                <RadzenText TextStyle="TextStyle.Subtitle2">Returned</RadzenText>
+                <RadzenText>@Loan.DateReturned.Value.ToLongDateString()</RadzenText>
+            </div>
+        }
+    </RadzenStack>
+
+    <div>
+        <RadzenText TextStyle="TextStyle.Subtitle2">Rental price</RadzenText>
+        <RadzenText>@(Loan.RentalPrice?.ToString("C") ?? "None")</RadzenText>
+    </div>
+
+    <div>
+        <RadzenText TextStyle="TextStyle.Subtitle2">Return condition requirements</RadzenText>
+        <RadzenText Style="white-space: pre-wrap;">@OrNone(Loan.ReturnConditionRequirements)</RadzenText>
+    </div>
+
+    <div>
+        <RadzenText TextStyle="TextStyle.Subtitle2">Late return penalty</RadzenText>
+        <RadzenText Style="white-space: pre-wrap;">@OrNone(Loan.LateReturnPenalty)</RadzenText>
+    </div>
+
+    <div>
+        <RadzenText TextStyle="TextStyle.Subtitle2">Loss penalty</RadzenText>
+        <RadzenText Style="white-space: pre-wrap;">@OrNone(Loan.LossPenalty)</RadzenText>
+    </div>
+
+    @if (Loan.Status == LoanStatuses.Closed && Loan.DateReturned != null)
+    {
+        <div>
+            <RadzenText TextStyle="TextStyle.Subtitle2">Return</RadzenText>
+            <RadzenText>
+                @(Loan.DateReturned.Value.Date > Loan.DateOfExpectedReturn.Date ? "Returned late" : "Returned on time")
+                @(Loan.ReturnedDamaged == true ? " · Damaged" : "")
+                @(Loan.ReturnConditionsMet == true ? " · Conditions met"
+                  : Loan.ReturnConditionsMet == false ? " · Conditions not met" : "")
+            </RadzenText>
+            @if (!string.IsNullOrWhiteSpace(Loan.ReturnNotes))
+            {
+                <RadzenText Style="white-space: pre-wrap;">@Loan.ReturnNotes</RadzenText>
+            }
+        </div>
+    }
+
+    @if (ShowActions)
+    {
+        @if (Loan.Status == LoanStatuses.Pending)
+        {
+            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
+                <RadzenButton Text="Cancel loan" Icon="cancel" ButtonStyle="ButtonStyle.Danger"
+                            Variant="Variant.Outlined" Click="@(() => DialogService.Close(LoanDetailsResult.Cancel))" />
+                <RadzenButton Text="Activate" Icon="check" ButtonStyle="ButtonStyle.Primary"
+                            Click="@(() => DialogService.Close(LoanDetailsResult.Activate))" />
+            </RadzenStack>
+        }
+        else if (Loan.Status == LoanStatuses.Active)
+        {
+            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
+                <RadzenButton Text="Close loan" Icon="assignment_turned_in" ButtonStyle="ButtonStyle.Primary"
+                            Click="@(() => DialogService.Close(LoanDetailsResult.Close))" />
+            </RadzenStack>
+        }
+    }
+</RadzenStack>
+
+@code {
+    [Parameter]
+    public LoanDetails Loan { get; set; } = default!;
+
+    private string label = "";
+
+    protected override void OnParametersSet()
+    {
+        label = LoanStatusDisplay.Label(Loan.Status, Loan.DateOfExpectedReturn);
+    }
+
+    private static string OrNone(string? text) =>
+        string.IsNullOrWhiteSpace(text) ? "None" : text;
+
+    [Parameter]
+    public bool ShowActions { get; set; } = true;
+}
